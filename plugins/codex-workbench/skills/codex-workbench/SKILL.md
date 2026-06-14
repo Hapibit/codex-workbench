@@ -25,6 +25,7 @@ This skill is self-contained for the core workbench flow. Prefer its bundled scr
 
 - Project intake: `scripts/intake.py`.
 - Workbench generation, upgrade, feature package creation, validation, audit, self-test, and golden-test: `scripts/workbench.py`.
+- Optional recipient user-workbench template install: `scripts/workbench.py user-workbench`.
 
 Use the smallest route that fits:
 
@@ -52,6 +53,14 @@ Separate public workbench concepts from internal implementation tools:
 - The project workbench must remain usable as plain repository files plus local scripts.
 
 ## Default User Flow
+
+When the user asks whether the plugin also configures the user's personal/global workbench:
+
+1. Explain that the project workbench is default and safe to generate inside a repo.
+2. Explain that user/global workbench files affect all projects and require explicit opt-in.
+3. Offer the bundled generic template under `assets/user-workbench-template/`.
+4. Preview with `python scripts/workbench.py user-workbench` before writing.
+5. Use `--apply` only after explicit confirmation; use `--force` only when the user accepts replacing existing user config with backups.
 
 When the user says "set up the workbench" or similar:
 
@@ -131,6 +140,8 @@ python scripts/workbench.py self-test
 python scripts/workbench.py golden-test
 python scripts/workbench.py doctor --plugin <plugin-root>
 python scripts/workbench.py package-check --plugin <plugin-root> --expected-version <version> --write-report
+python scripts/workbench.py user-workbench
+python scripts/workbench.py user-workbench --apply
 python scripts/check_enhancements.py --query "<task text>"
 ```
 
@@ -139,6 +150,7 @@ Use write-enabling or overwrite flags only after explicit user confirmation:
 - `generate` and `feature` write by default; use `--dry-run` first when previewing.
 - `upgrade` previews by default; use `--apply` to write after review.
 - Use `--force`, `--replace-docs`, or `--refresh-generated` only when the user explicitly accepts overwrite or refresh risk.
+- `user-workbench` previews by default; use `--apply` only after explicit user confirmation because it writes to the recipient's global Codex config.
 
 ## Bundled References
 

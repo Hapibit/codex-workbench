@@ -248,12 +248,25 @@ RECIPIENT_SETUP_ITEMS = [
     "Project environment variables and API keys",
 ]
 
+USER_WORKBENCH_FILES = [
+    "AGENTS.md",
+    "WORKBENCH_ROUTING.md",
+    "CODE_QUALITY.md",
+    "CODE_REVIEW.md",
+    "RTK.md",
+]
+
 REQUIRED_SKILL_FILES = [
     "SKILL.md",
     "scripts/intake.py",
     "scripts/workbench.py",
     "scripts/check_enhancements.py",
     "assets/PROJECT_INTAKE.template.md",
+    "assets/user-workbench-template/AGENTS.md",
+    "assets/user-workbench-template/WORKBENCH_ROUTING.md",
+    "assets/user-workbench-template/CODE_QUALITY.md",
+    "assets/user-workbench-template/CODE_REVIEW.md",
+    "assets/user-workbench-template/RTK.md",
     "assets/project-adapter-template/AGENTS.md",
     "assets/project-adapter-template/WORKBENCH.md",
     "assets/project-adapter-template/REVIEW.md",
@@ -298,6 +311,7 @@ AGENTS_MD_NEAR_LIMIT_BYTES = 24 * 1024
 PACKAGING_MANIFEST_REQUIRED_INCLUDES = [
     ".codex-plugin/plugin.json",
     "README.md",
+    "docs/USER_WORKBENCH.md",
     "skills/codex-workbench/**",
     "docs/maintenance/**",
 ]
@@ -1232,6 +1246,56 @@ def write_file(path: Path, content: str, force: bool, dry_run: bool) -> str:
         except OSError:
             pass
     return "written"
+
+
+def default_codex_home() -> Path:
+    configured = os.environ.get("CODEX_HOME")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (Path.home() / ".codex").resolve()
+
+
+def user_workbench_template_files() -> dict[str, str]:
+    template_dir = skill_root() / "assets" / "user-workbench-template"
+    files: dict[str, str] = {}
+    for filename in USER_WORKBENCH_FILES:
+        path = template_dir / filename
+        if not path.exists():
+            raise SystemExit(f"Missing user workbench template file: {path}")
+        files[filename] = path.read_text(encoding="utf-8")
+    return files
+
+
+def install_user_workbench(codex_home: str | None, apply: bool, force: bool) -> dict[str, Any]:
+    target_root = Path(codex_home).expanduser().resolve() if codex_home else default_codex_home()
+    files = user_workbench_template_files()
+    actions: dict[str, dict[str, str]] = {}
+    for rel, content in files.items():
+        target = target_root / rel
+        if target.exists() and not force:
+            action = "keep-existing"
+        elif target.exists() and force:
+            action = "replace-existing"
+        else:
+            action = "write-missing"
+        status = write_file(target, content, force=force, dry_run=not apply)
+        actions[rel] = {
+            "action": action,
+            "status": status,
+        }
+    return {
+        "schema": "codex-workbench-user-workbench/v1",
+        "timestamp": utc_now(),
+        "codexHome": str(target_root),
+        "apply": apply,
+        "force": force,
+        "files": actions,
+        "notes": [
+            "This command installs only generic user workbench templates.",
+            "It does not configure credentials, MCP servers, hook trust, approval state, or project-specific commands.",
+            "Without --apply it is a preview only.",
+        ],
+    }
 
 
 def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]:
@@ -2372,6 +2436,12 @@ def main(argv: list[str] | None = None) -> int:
     p_package.add_argument("--write-report", action="store_true")
     p_package.add_argument("--output", default=None)
 
+    p_user = sub.add_parser("user-workbench")
+    p_user.add_argument("--codex-home", default=None, help="Target Codex user config directory. Defaults to CODEX_HOME or ~/.codex.")
+    p_user.add_argument("--apply", action="store_true", help="Write files. Without this flag, preview only.")
+    p_user.add_argument("--force", action="store_true", help="Replace existing files after creating backups.")
+    p_user.add_argument("--output", default=None)
+
     args = parser.parse_args(argv)
 
     if args.command == "inspect":
@@ -2424,6 +2494,10 @@ def main(argv: list[str] | None = None) -> int:
         report = package_check_workbench(args.plugin, args.expected_version, args.write_report)
         write_json(report, args.output)
         return 0 if report["passed"] else 1
+    if args.command == "user-workbench":
+        report = install_user_workbench(args.codex_home, args.apply, args.force)
+        write_json(report, args.output)
+        return 0
     raise SystemExit(f"Unknown command: {args.command}")
 
 

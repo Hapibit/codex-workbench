@@ -32,6 +32,46 @@
 
 ## 记录
 
+### 2026-06-15 - 把用户工作台模板纳入发布包
+
+问题：
+
+发布包已经能生成项目工作台，但没有把“接收者自己的用户工作台”作为可安装模板交付。结果是别人安装 `codex-workbench` 后，只能得到项目级规则、质量门和功能工作包；如果他没有自己的全局 `AGENTS.md`、工具路由、搜索/澄清习惯和审查规则，项目工作台仍然能用，但启动层约束不足，容易误以为插件会自动修改用户全局配置。
+
+证据来源：
+
+- 用户反馈：指出“发布整个你没有修改用户工作台”，要求本地发布包先修正。
+- 本地失败证据：`README.md` 只解释用户工作台和项目工作台的关系，没有提供可复制模板或脚本入口；`packaging-manifest.json` 也未把用户工作台说明纳入发布文件。
+
+决策：
+
+不在插件安装时自动覆盖接收者的 `~/.codex/`，因为用户工作台会影响所有项目，并且可能涉及个人账号、MCP、hook 信任和本机路径。改为发布一套通用用户工作台模板，并提供 `user-workbench` 命令：默认只预览，只有用户明确加 `--apply` 才写入，已有文件默认跳过，`--force` 才备份后覆盖。
+
+变更文件：
+
+- `README.md`
+- `docs/USER_WORKBENCH.md`
+- `packaging-manifest.json`
+- `skills/codex-workbench/SKILL.md`
+- `skills/codex-workbench/scripts/workbench.py`
+- `skills/codex-workbench/assets/user-workbench-template/AGENTS.md`
+- `skills/codex-workbench/assets/user-workbench-template/WORKBENCH_ROUTING.md`
+- `skills/codex-workbench/assets/user-workbench-template/CODE_QUALITY.md`
+- `skills/codex-workbench/assets/user-workbench-template/CODE_REVIEW.md`
+- `skills/codex-workbench/assets/user-workbench-template/RTK.md`
+
+验证结果：
+
+- `user-workbench` 预览：通过，默认返回 `would-write`，不写入目标目录。
+- `user-workbench --apply` 写入临时目录：通过，生成 5 个用户工作台文件。
+- 脚本语法检查：通过。
+- 发布包扫描：未发现作者个人绝对路径、邮箱或真实密钥；只出现安全说明中的 `token`、`cookie` 等普通词。
+
+后续动作：
+
+- 重新运行 `package-check --expected-version 1.0.0 --write-report`，确认删除 Python cache 后发布门禁通过。
+- 如果用户后续要求真正发布到 GitHub，再处理本地/远端分支差异并由用户确认后推送。
+
 ### 2026-06-14 - 强化功能工作包的可执行证据
 
 问题：

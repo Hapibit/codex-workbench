@@ -3,6 +3,7 @@
   "include": [
     ".codex-plugin/plugin.json",
     "README.md",
+    "docs/USER_WORKBENCH.md",
     "docs/maintenance/**",
     "skills/codex-workbench/**"
   ],
