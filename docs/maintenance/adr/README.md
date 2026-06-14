@@ -39,3 +39,32 @@ Date: YYYY-MM-DD
 
 正面影响、代价、风险、迁移要求和验证方式。
 ```
+
+## 发布包边界
+
+公开 `README.md` 面向普通用户，只说明这个插件是什么、怎么调用、会生成什么、用户还需要自己配置什么。不要把完整发布目录树放在 README 主文档里，避免用户误以为需要手动创建这些目录。
+
+维护者打包规则放在本目录和 `packaging-manifest.json`。正式发布或打包给别人时，发布目录不应包含内部备份、旧 helper skill、Python 缓存、本机验证报告或临时文件。
+
+只发布：
+
+```text
+codex-workbench/
+├── .codex-plugin/plugin.json
+├── README.md
+├── docs/
+│   └── maintenance/
+│       ├── IMPROVEMENT_LOG.md
+│       ├── FAILURE_PATTERNS.md
+│       └── adr/
+│           └── README.md
+└── skills/
+    └── codex-workbench/
+        ├── SKILL.md
+        ├── agents/
+        ├── scripts/
+        ├── assets/
+        └── references/
+```
+
+`.workbench-validation/` 只保存机器生成报告，不进入发布包。`docs/maintenance/` 保存长期维护证据，会随发布包一起保留，供发布复查使用。
