@@ -1,0 +1,41 @@
+{
+  "schema": "codex-workbench-enhancements/v1",
+  "categories": [
+    {
+      "id": "ui-design",
+      "label": "UI and design",
+      "triggers": ["figma", "ui", "ux", "frontend", "design system", "visual polish", "component fidelity", "界面", "设计稿", "前端", "设计系统"],
+      "skills": ["figma", "figma-use", "figma-implement-design", "figma-generate-design", "figma-generate-library", "frontend-design", "ui-ux-pro-max"]
+    },
+    {
+      "id": "diagrams",
+      "label": "Diagrams",
+      "triggers": ["diagram", "draw.io", "erd", "architecture diagram", "flowchart", "sequence diagram", "uml", "mind map", "er图", "流程图", "架构图", "时序图", "类图", "脑图"],
+      "skills": ["drawio-skill"]
+    },
+    {
+      "id": "testing-ci",
+      "label": "Testing and CI",
+      "triggers": ["test", "unit test", "api test", "playwright", "jenkins", "ci", "github actions", "quality gate", "测试", "单元测试", "接口测试", "质量门", "流水线"],
+      "skills": ["unit-testing", "api-testing", "playwright-automation", "ai-test-generation", "ai-system-testing", "ai-qa-review", "test-planning", "ci-cd-integration", "jenkinsfile-generator", "jenkinsfile-validator"]
+    },
+    {
+      "id": "docs-writing",
+      "label": "Documentation and writing",
+      "triggers": ["readme", "technical docs", "word", "docx", "pdf", "ppt", "paper", "论文", "文档", "说明文档", "技术文档", "报告"],
+      "skills": ["technical-doc-writer", "docx", "docx-win", "pdf", "pptpro", "research-paper-writing", "checkpro", "final-delivery-clean"]
+    },
+    {
+      "id": "enterprise-ai",
+      "label": "Enterprise AI governance",
+      "triggers": ["rag", "agent", "llm", "eval", "owasp llm", "nist ai", "ai governance", "safety", "智能体", "评估", "安全", "治理", "大模型"],
+      "skills": ["enterprise-ai-app-lifecycle", "eval-driven-dev", "owasp-llm-top10", "nist-ai-rmf", "security-threat-model", "security-best-practices"]
+    },
+    {
+      "id": "architecture",
+      "label": "Project planning and architecture",
+      "triggers": ["architecture", "project planning", "blueprint", "tech debt", "codebase health", "recon", "架构", "项目规划", "蓝图", "技术债", "代码健康"],
+      "skills": ["project-architect", "codebase-recon", "brooks-audit", "brooks-health", "brooks-debt"]
+    }
+  ]
+}

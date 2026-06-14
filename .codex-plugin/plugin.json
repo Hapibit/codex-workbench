@@ -1,0 +1,22 @@
+{
+  "name": "codex-workbench",
+  "version": "1.0.0",
+  "description": "A low-friction Codex workbench package with one visible skill entrypoint for project intake, workbench generation, feature workflows, quality gates, and review rules.",
+  "author": {
+    "name": "Hapibit"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Workbench",
+    "shortDescription": "One entry for project AI workbenches.",
+    "longDescription": "Codex Workbench exposes one visible skill entrypoint and bundles its own project-intake and workbench-generation scripts. It creates repository-local AGENTS.md/WORKBENCH.md files, development flow contracts, product baselines, feature work packages, deterministic quality/runtime gates, independent review prompts, and validation/audit reports. Third-party and specialist skills are optional capability packs: they can enhance design, diagrams, tests, docs, CI, security, or AI eval, but users do not need to learn or install them before the workbench can run.",
+    "developerName": "Hapibit",
+    "category": "Productivity",
+    "capabilities": ["Write", "Automation"],
+    "defaultPrompt": [
+      "Use Codex Workbench to set up this project's AI workbench.",
+      "Use Codex Workbench to tell me the next step for this project.",
+      "Use Codex Workbench to audit this workbench for sharing."
+    ]
+  }
+}

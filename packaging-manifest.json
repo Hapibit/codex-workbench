@@ -1,0 +1,27 @@
+{
+  "schema": "codex-workbench-packaging-manifest/v1",
+  "include": [
+    ".codex-plugin/plugin.json",
+    "README.md",
+    "docs/maintenance/**",
+    "skills/codex-workbench/**"
+  ],
+  "exclude": [
+    "internal/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    ".git/**",
+    ".workbench-validation/**"
+  ],
+  "visibleSkills": [
+    "codex-workbench"
+  ],
+  "notes": [
+    "The distributed package should expose one visible skill only.",
+    "Bundled scripts, templates, and references live under skills/codex-workbench.",
+    "Long-term maintainer evidence lives under docs/maintenance and is packaged for release review.",
+    ".workbench-validation is generated validation output and must not be packaged.",
+    "Optional enhancement packs are registered in skills/codex-workbench/assets/enhancements.json.",
+    "Do not package internal legacy skill backups or Python cache files."
+  ]
+}
