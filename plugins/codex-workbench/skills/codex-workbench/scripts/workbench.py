@@ -56,6 +56,26 @@ REQUIRED_ADAPTER_FILES = [
     "DEVELOPMENT_FLOW.md",
     "PRODUCT_BASELINE.md",
     "FEATURE_WORKFLOW.md",
+    "workbench/product/PRODUCT_BRIEF.md",
+    "workbench/product/PRD.md",
+    "workbench/product/ROADMAP.md",
+    "workbench/design/UX_SPEC.md",
+    "workbench/design/PROTOTYPE.md",
+    "workbench/design/USER_FLOW.md",
+    "workbench/architecture/ARCHITECTURE.md",
+    "workbench/architecture/DATA_MODEL.md",
+    "workbench/architecture/API_DESIGN.md",
+    "workbench/architecture/AI_DESIGN.md",
+    "workbench/architecture/adr/README.md",
+    "workbench/delivery/RELEASE_PLAN.md",
+    "workbench/delivery/ITERATION_PLAN.md",
+    "workbench/delivery/TASK_BREAKDOWN.md",
+    "workbench/scorecard/RUBRIC.md",
+    "workbench/scorecard/SCORECARD.md",
+    "workbench/scorecard/CALIBRATION.md",
+    "workbench/scorecard/scorecard.py",
+    "workbench/scorecard/scorecard.ps1",
+    "workbench/scorecard/scorecard.sh",
     "workbench/quality/quality_gate.py",
     "workbench/quality/quality-gate.ps1",
     "workbench/quality/quality-gate.sh",
@@ -66,26 +86,34 @@ REQUIRED_ADAPTER_FILES = [
     "workbench/runtime/api-smoke.ps1",
     "workbench/runtime/api-smoke.sh",
     "workbench/feedback/FAILURE_LOG.md",
+    "workbench/feedback/ITERATION_LOG.md",
+    "workbench/feedback/AI_EFFECTIVENESS.md",
     "workbench/review/independent-review-prompt.md",
     "workbench/feature-template/SPEC.md",
     "workbench/feature-template/CLARIFY.md",
+    "workbench/feature-template/DESIGN.md",
     "workbench/feature-template/PLAN.md",
     "workbench/feature-template/TASKS.md",
     "workbench/feature-template/DECISIONS.md",
+    "workbench/feature-template/IMPLEMENTATION_NOTES.md",
     "workbench/feature-template/CHECKLIST.md",
     "workbench/feature-template/VERIFY.md",
     "workbench/feature-template/REVIEW.md",
+    "workbench/feature-template/CHANGELOG.md",
 ]
 
 FEATURE_PACKAGE_FILES = [
     "SPEC.md",
     "CLARIFY.md",
+    "DESIGN.md",
     "PLAN.md",
     "TASKS.md",
     "DECISIONS.md",
+    "IMPLEMENTATION_NOTES.md",
     "CHECKLIST.md",
     "VERIFY.md",
     "REVIEW.md",
+    "CHANGELOG.md",
 ]
 
 REQUIRED_ADAPTER_TEXT_BY_FILE = {
@@ -93,6 +121,10 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "需求不清",
         "完成标准",
         "quality_gate.py",
+        "PRODUCT_BRIEF.md",
+        "PRD.md",
+        "UX_SPEC.md",
+        "ARCHITECTURE.md",
         "工作量分级门",
         "硬触发器",
         "FAILURE_LOG.md",
@@ -109,8 +141,17 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "quality_gate.py",
         "接收者配置",
         "工作台审计",
+        "标准开发流程",
+        "PRODUCT_BRIEF.md",
+        "PRD.md",
+        "UX_SPEC.md",
+        "ARCHITECTURE.md",
+        "ITERATION_LOG.md",
+        "AI_EFFECTIVENESS.md",
         "工作量分级门",
         "硬触发器",
+        "scorecard",
+        "证据审计",
         "FAILURE_LOG.md",
         "反馈闭环",
     ],
@@ -131,6 +172,117 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "用户目标",
         "权限",
         "验证证据",
+        "scorecard",
+    ],
+    "workbench/product/PRODUCT_BRIEF.md": [
+        "产品简报",
+        "业务目标",
+        "成功指标",
+        "可迭代",
+    ],
+    "workbench/product/PRD.md": [
+        "产品需求",
+        "用户故事",
+        "验收标准",
+        "非目标",
+    ],
+    "workbench/product/ROADMAP.md": [
+        "路线图",
+        "版本",
+        "优先级",
+        "依赖",
+    ],
+    "workbench/design/UX_SPEC.md": [
+        "交互规格",
+        "用户流程",
+        "状态",
+        "可访问性",
+    ],
+    "workbench/design/PROTOTYPE.md": [
+        "原型",
+        "页面",
+        "状态",
+        "验收",
+    ],
+    "workbench/design/USER_FLOW.md": [
+        "用户流程",
+        "入口",
+        "成功路径",
+        "失败路径",
+    ],
+    "workbench/architecture/ARCHITECTURE.md": [
+        "架构设计",
+        "模块",
+        "边界",
+        "风险",
+    ],
+    "workbench/architecture/DATA_MODEL.md": [
+        "数据模型",
+        "实体",
+        "权限",
+        "迁移",
+    ],
+    "workbench/architecture/API_DESIGN.md": [
+        "API 设计",
+        "契约",
+        "错误",
+        "权限",
+    ],
+    "workbench/architecture/AI_DESIGN.md": [
+        "AI 设计",
+        "输入",
+        "输出",
+        "eval",
+    ],
+    "workbench/architecture/adr/README.md": [
+        "ADR",
+        "Context",
+        "Decision",
+        "Consequences",
+    ],
+    "workbench/delivery/RELEASE_PLAN.md": [
+        "发布计划",
+        "范围",
+        "验证",
+        "回滚",
+    ],
+    "workbench/delivery/ITERATION_PLAN.md": [
+        "迭代计划",
+        "变更",
+        "复测结果",
+        "下一轮",
+    ],
+    "workbench/delivery/TASK_BREAKDOWN.md": [
+        "任务拆分",
+        "依赖",
+        "验证",
+        "负责人",
+    ],
+    "workbench/scorecard/RUBRIC.md": [
+        "证据审计",
+        "证据成熟度",
+        "硬阻塞",
+        "参考线",
+        "可信度",
+        "校准",
+    ],
+    "workbench/scorecard/SCORECARD.md": [
+        "scorecard_status",
+        "score_confidence",
+        "calibration_status",
+        "semantic_review_status",
+        "架构合理性",
+        "人工复核",
+        "误报",
+        "漏报",
+    ],
+    "workbench/scorecard/CALIBRATION.md": [
+        "calibration_status",
+        "锚定样例",
+        "人工抽查",
+        "误报",
+        "漏报",
+        "参考线调整",
     ],
     "FEATURE_WORKFLOW.md": [
         "工作量分级门",
@@ -142,12 +294,15 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "L4 紧急/重大任务",
         "SPEC.md",
         "CLARIFY.md",
+        "DESIGN.md",
         "PLAN.md",
         "TASKS.md",
         "DECISIONS.md",
+        "IMPLEMENTATION_NOTES.md",
         "CHECKLIST.md",
         "VERIFY.md",
         "REVIEW.md",
+        "CHANGELOG.md",
     ],
     "workbench/feature-template/SPEC.md": [
         "用户目标",
@@ -162,6 +317,12 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "阻塞",
         "已确认",
         "ready_for_plan",
+    ],
+    "workbench/feature-template/DESIGN.md": [
+        "功能设计",
+        "UX",
+        "架构",
+        "approved_for_plan",
     ],
     "workbench/feature-template/PLAN.md": [
         "技术方案",
@@ -178,6 +339,12 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "决策记录",
         "原因",
         "影响",
+    ],
+    "workbench/feature-template/IMPLEMENTATION_NOTES.md": [
+        "实现记录",
+        "AI 修改",
+        "偏离计划",
+        "问题",
     ],
     "workbench/feature-template/CHECKLIST.md": [
         "阶段门禁",
@@ -198,11 +365,29 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "P0",
         "P1",
     ],
+    "workbench/feature-template/CHANGELOG.md": [
+        "变更记录",
+        "需求变化",
+        "影响文件",
+        "复测",
+    ],
     "workbench/feedback/FAILURE_LOG.md": [
         "证据归档位置",
         "workbench/features/<feature-name>/VERIFY.md",
         "自动化状态",
         "质量门",
+    ],
+    "workbench/feedback/ITERATION_LOG.md": [
+        "迭代记录",
+        "变更来源",
+        "影响层级",
+        "复测结果",
+    ],
+    "workbench/feedback/AI_EFFECTIVENESS.md": [
+        "AI 效果评估",
+        "返工",
+        "审查发现",
+        "改进动作",
     ],
 }
 
@@ -228,12 +413,13 @@ REPORT_DIR = ".workbench-validation"
 
 PROCESS_STATUSES = {"draft", "confirmed"}
 INTAKE_STATUSES = {"draft", "confirmed"}
-FEATURE_STAGE_ORDER = ["spec", "clarify", "plan", "tasks", "implement", "verify", "review", "complete"]
+FEATURE_STAGE_ORDER = ["spec", "clarify", "design", "plan", "tasks", "implement", "verify", "review", "complete"]
 FEATURE_STAGES = set(FEATURE_STAGE_ORDER)
 FEATURE_STATUSES = {"active", "on_hold", "complete"}
 RISK_LEVELS = {"l1", "l2", "l3", "l4"}
 SPEC_STATUSES = {"draft", "approved", "blocked"}
 CLARIFY_STATUSES = {"blocked", "ready", "deferred"}
+DESIGN_STATUSES = {"draft", "approved", "blocked"}
 PLAN_STATUSES = {"draft", "approved", "blocked"}
 TASKS_STATUSES = {"draft", "ready", "blocked"}
 VERIFY_STATUSES = {"missing", "partial", "passed", "failed", "blocked"}
@@ -271,6 +457,9 @@ REQUIRED_SKILL_FILES = [
     "assets/project-adapter-template/WORKBENCH.md",
     "assets/project-adapter-template/REVIEW.md",
     "assets/project-adapter-template/FEATURE_WORKFLOW.md",
+    "assets/project-adapter-template/workbench/scorecard/RUBRIC.md",
+    "assets/project-adapter-template/workbench/scorecard/SCORECARD.md",
+    "assets/project-adapter-template/workbench/scorecard/CALIBRATION.md",
     "references/project-adapter-template.md",
     "references/quality-gate-patterns.md",
     "references/recipient-setup-boundaries.md",
@@ -871,6 +1060,17 @@ def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def run_scorecard(root: Path, profile: str) -> None:
+    script = root / "workbench" / "scorecard" / "scorecard.py"
+    if not script.exists():
+        raise SystemExit("[quality] scorecard.py is missing. Generate or upgrade workbench/scorecard before trusting evidence reporting.")
+    command = [sys.executable, str(script), "--profile", profile, "--write-report", "--called-from-quality-gate", "--enforce-blockers"]
+    print("[quality] scorecard evidence report")
+    result = subprocess.run(command, cwd=str(root), text=True)
+    if result.returncode != 0:
+        raise SystemExit(f"[quality] scorecard found blocking evidence gaps (exit {{result.returncode}})")
+
+
 def run_step(root: Path, step: dict) -> None:
     name = step["name"]
     group = step.get("group", "default")
@@ -926,7 +1126,7 @@ def is_placeholder_value(value: str | None) -> bool:
 
 def current_stage_index(stage: str) -> int:
     try:
-        return ["spec", "clarify", "plan", "tasks", "implement", "verify", "review", "complete"].index(stage)
+        return ["spec", "clarify", "design", "plan", "tasks", "implement", "verify", "review", "complete"].index(stage)
     except ValueError:
         return -1
 
@@ -967,7 +1167,7 @@ def check_feature_packages(root: Path) -> list[str]:
         current_stage = (read_field(checklist_text, "current_stage") or "unknown").lower()
         if feature_status not in {{"active", "on_hold", "complete"}}:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid feature_status: {{feature_status}}")
-        if current_stage not in {{"spec", "clarify", "plan", "tasks", "implement", "verify", "review", "complete"}}:
+        if current_stage not in {{"spec", "clarify", "design", "plan", "tasks", "implement", "verify", "review", "complete"}}:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid current_stage: {{current_stage}}")
         if feature_status == "on_hold":
             checked.append(str(package.relative_to(root)) + " (on_hold)")
@@ -975,10 +1175,12 @@ def check_feature_packages(root: Path) -> list[str]:
 
         spec_text = read_text(package / "SPEC.md")
         clarify_text = read_text(package / "CLARIFY.md")
+        design_text = read_text(package / "DESIGN.md")
         plan_text = read_text(package / "PLAN.md")
         tasks_text = read_text(package / "TASKS.md")
         spec_status = require_feature_status(package, "SPEC.md", {{"draft", "approved", "blocked"}})
         clarify_status = require_feature_status(package, "CLARIFY.md", {{"blocked", "ready", "deferred"}})
+        design_status = require_feature_status(package, "DESIGN.md", {{"draft", "approved", "blocked"}})
         plan_status = require_feature_status(package, "PLAN.md", {{"draft", "approved", "blocked"}})
         tasks_status = require_feature_status(package, "TASKS.md", {{"draft", "ready", "blocked"}})
         verify_status = require_feature_status(package, "VERIFY.md", {{"missing", "partial", "passed", "failed", "blocked"}})
@@ -1009,6 +1211,8 @@ def check_feature_packages(root: Path) -> list[str]:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before SPEC was approved")
         if stage_reached(current_stage, "plan") and (clarify_status not in {{"ready", "deferred"}} or not read_bool(clarify_text, "ready_for_plan")):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before CLARIFY was ready")
+        if stage_reached(current_stage, "plan") and (design_status != "approved" or not read_bool(design_text, "approved_for_plan")):
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before DESIGN was approved")
         if stage_reached(current_stage, "tasks") and (plan_status != "approved" or not read_bool(plan_text, "approved_for_tasks")):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached TASKS before PLAN was approved for tasks")
         if stage_reached(current_stage, "implement") and (not read_bool(plan_text, "approved_for_implementation") or tasks_status != "ready" or not read_bool(tasks_text, "ready_for_implementation")):
@@ -1024,6 +1228,7 @@ def check_feature_packages(root: Path) -> list[str]:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is {{feature_status}}. Set feature_status to on_hold for paused work, or complete it before passing the final quality gate.")
         require_feature_field(package, "SPEC.md", "approved_for_plan", True)
         require_feature_field(package, "CLARIFY.md", "ready_for_plan", True)
+        require_feature_field(package, "DESIGN.md", "approved_for_plan", True)
         require_feature_field(package, "PLAN.md", "approved_for_tasks", True)
         require_feature_field(package, "PLAN.md", "approved_for_implementation", True)
         require_feature_field(package, "TASKS.md", "ready_for_implementation", True)
@@ -1066,6 +1271,8 @@ def main() -> int:
     for step in selected:
         run_step(root, step)
         checks_run.append(step["name"])
+    run_scorecard(root, args.profile)
+    checks_run.append("scorecard evidence report")
 
     marker_dir = root / ".workbench-validation"
     marker_dir.mkdir(parents=True, exist_ok=True)
@@ -1085,6 +1292,561 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 '''
+
+
+def generate_scorecard_py() -> str:
+    feature_files_json = quote_json(FEATURE_PACKAGE_FILES)
+    required_adapter_files_json = quote_json(REQUIRED_ADAPTER_FILES)
+    script = r'''#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+FEATURE_PACKAGE_FILES = __FEATURE_PACKAGE_FILES__
+REQUIRED_ADAPTER_FILES = __REQUIRED_ADAPTER_FILES__
+
+WEIGHTS = {
+    "intake": 15,
+    "product": 15,
+    "design": 10,
+    "architecture": 15,
+    "delivery": 10,
+    "features": 20,
+    "verification": 10,
+    "feedback": 5,
+}
+
+PROFILE_RULES = {
+    "smoke": {
+        "reference_score": 60,
+        "max_blockers": 0,
+        "min_component_percent": 20,
+        "require_calibration": False,
+        "require_semantic_review": False,
+        "component_floor_is_blocker": False,
+        "score_is_gate": False,
+    },
+    "standard": {
+        "reference_score": 75,
+        "max_blockers": 0,
+        "min_component_percent": 50,
+        "require_calibration": False,
+        "require_semantic_review": False,
+        "component_floor_is_blocker": False,
+        "score_is_gate": False,
+    },
+    "full": {
+        "reference_score": 85,
+        "max_blockers": 0,
+        "min_component_percent": 60,
+        "require_calibration": True,
+        "require_semantic_review": True,
+        "component_floor_is_blocker": False,
+        "score_is_gate": False,
+    },
+}
+
+STATUS_PATTERN = re.compile(r"(?im)^\s*status\s*:\s*([a-zA-Z_-]+)\s*$")
+ACCEPTED_REVIEW_STATUSES = {"passed", "accepted_with_risk", "not_required"}
+ACCEPTED_CALIBRATION_STATUSES = {"calibrated", "reviewed", "accepted_with_risk"}
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def project_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
+def field(text: str, name: str) -> str | None:
+    match = re.search(rf"(?im)^\s*{re.escape(name)}\s*:\s*(.+?)\s*$", text)
+    return match.group(1).strip() if match else None
+
+
+def status_of(path: Path) -> str | None:
+    text = read_text(path)
+    match = STATUS_PATTERN.search(text)
+    return match.group(1).strip().lower() if match else None
+
+
+def has_open_blockers(text: str, prefix: str) -> bool:
+    return bool(re.search(rf"(?im)^\|\s*{prefix}\d+\s*\|.*\|\s*open\s*\|\s*$", text))
+
+
+def is_placeholder_cell(cell: str, placeholder_values: set[str]) -> bool:
+    normalized = cell.strip()
+    if normalized in placeholder_values:
+        return True
+    if not normalized:
+        return True
+    if normalized.startswith("`") and normalized.endswith("`"):
+        return True
+    if normalized.lower() in {"pending", "draft", "open", "unconfirmed", "project owner", "must"}:
+        return True
+    if re.fullmatch(r"[A-Z]{1,4}\d{3,}", normalized):
+        return True
+    if re.fullmatch(r"(FP|FN|I|B)\d{3,}", normalized):
+        return True
+    if normalized.endswith(".md") or normalized.endswith(".json"):
+        return True
+    if "待补充" in normalized or "作为..." in normalized or "Given/When/Then" in normalized:
+        return True
+    if "/" in normalized and any(part.strip().lower() in {"low", "medium", "high", "prototype-only", "usable-with-known-risks", "release-ready"} for part in normalized.split("/")):
+        return True
+    return False
+
+
+def contains_filled_table_row(text: str) -> bool:
+    placeholder_values = {
+        "",
+        "\u7f16\u53f7", "\u6765\u6e90", "\u95ee\u9898", "\u5904\u7406\u72b6\u6001", "\u4fee\u590d\u4f4d\u7f6e",
+        "\u9879\u76ee", "\u7ed3\u8bba", "\u8bc1\u636e\u4f4d\u7f6e", "\u98ce\u9669/\u52a8\u4f5c",
+        "\u7ef4\u5ea6", "\u6863\u4f4d", "\u603b\u5206", "\u7b49\u7ea7", "\u786c\u963b\u585e\u6570", "\u4e3b\u8981\u98ce\u9669",
+        "\u6837\u4f8b", "\u9884\u671f\u8bc4\u5206", "\u7406\u7531",
+        "\u62bd\u67e5\u4eba", "\u6837\u672c", "\u4eba\u5de5\u7ed3\u8bba", "\u811a\u672c\u7ed3\u8bba",
+        "\u5dee\u5f02", "\u540e\u7eed\u52a8\u4f5c", "\u65e5\u671f", "\u8c03\u6574", "\u4f9d\u636e",
+        "\u9879\u76ee\u72b6\u6001", "\u9884\u671f\u7b49\u7ea7", "\u9884\u671f\u53ef\u4fe1\u5ea6", "\u590d\u6838\u4eba",
+        "\u9700\u6c42", "\u7528\u6237/\u89d2\u8272", "\u4f18\u5148\u7ea7", "\u72b6\u6001",
+        "\u7528\u6237\u6545\u4e8b", "\u9a8c\u6536\u6807\u51c6", "\u5931\u8d25\u8def\u5f84", "\u5bf9\u5e94\u529f\u80fd\u5305",
+    }
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or "---" in stripped:
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        meaningful = [cell for cell in cells if not is_placeholder_cell(cell, placeholder_values)]
+        if len(cells) >= 3 and meaningful:
+            return True
+    return False
+
+
+def section_between(text: str, heading: str) -> str:
+    match = re.search(rf"(?ms)^##\s+{re.escape(heading)}\s*$([\s\S]*?)(?=^##\s+|\Z)", text)
+    return match.group(1) if match else ""
+
+
+def has_unchecked_item(path: Path) -> bool:
+    return bool(re.search(r"(?m)^- \[ \]", read_text(path)))
+
+
+def score_file_status(root: Path, rel: str, accepted: set[str], full_points: int, partial_points: int = 1) -> tuple[int, list[str], list[str]]:
+    path = root / rel
+    if not path.exists():
+        return 0, [f"missing {rel}"], []
+    status = status_of(path)
+    if status in accepted:
+        return full_points, [], []
+    if status == "draft":
+        return partial_points, [], [f"{rel} is still draft"]
+    return 0, [f"{rel} has invalid or missing status"], []
+
+
+def component_result(name: str, score: int, max_score: int, blockers: list[str], warnings: list[str]) -> dict:
+    score = max(0, min(score, max_score))
+    return {
+        "name": name,
+        "score": score,
+        "maxScore": max_score,
+        "percent": round(score * 100 / max_score, 1) if max_score else 0,
+        "blockers": blockers,
+        "warnings": warnings,
+    }
+
+
+def profile_rules(profile: str) -> dict:
+    return PROFILE_RULES.get(profile, PROFILE_RULES["standard"])
+
+
+def score_intake(root: Path) -> dict:
+    rel = "PROJECT_INTAKE.md"
+    text = read_text(root / rel)
+    score, blockers, warnings = score_file_status(root, rel, {"confirmed"}, WEIGHTS["intake"], 5)
+    required_terms = ["\u9879\u76ee\u76ee\u6807", "\u7b2c\u4e00\u7248\u8303\u56f4", "AI \u4f7f\u7528\u8fb9\u754c", "\u9a8c\u6536", "\u963b\u585e\u95ee\u9898"]
+    missing_terms = [term for term in required_terms if term not in text]
+    score -= len(missing_terms) * 2
+    warnings.extend([f"PROJECT_INTAKE.md missing section cue: {term}" for term in missing_terms])
+    if has_open_blockers(text, "P"):
+        blockers.append("PROJECT_INTAKE.md has open blocking questions")
+    return component_result("intake", score, WEIGHTS["intake"], blockers, warnings)
+
+
+def score_product(root: Path) -> dict:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    score = 0
+    for rel in ("workbench/product/PRODUCT_BRIEF.md", "workbench/product/PRD.md", "workbench/product/ROADMAP.md"):
+        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed"}, 4, 1)
+        score += part
+        blockers.extend(part_blockers)
+        warnings.extend(part_warnings)
+    prd = read_text(root / "workbench/product/PRD.md")
+    if contains_filled_table_row(prd):
+        score += 3
+    else:
+        warnings.append("PRD.md has no filled requirement/story evidence")
+    return component_result("product", score, WEIGHTS["product"], blockers, warnings)
+
+
+def score_design(root: Path) -> dict:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    score = 0
+    for rel in ("workbench/design/UX_SPEC.md", "workbench/design/PROTOTYPE.md", "workbench/design/USER_FLOW.md"):
+        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed"}, 3, 1)
+        score += part
+        blockers.extend(part_blockers)
+        warnings.extend(part_warnings)
+    ux = read_text(root / "workbench/design/UX_SPEC.md")
+    if all(term in ux for term in ("\u5931\u8d25", "\u6743\u9650", "\u53ef\u8bbf\u95ee\u6027")):
+        score += 1
+    else:
+        warnings.append("UX_SPEC.md should cover failure, permission, and accessibility states")
+    return component_result("design", score, WEIGHTS["design"], blockers, warnings)
+
+
+def score_architecture(root: Path) -> dict:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    score = 0
+    for rel in (
+        "workbench/architecture/ARCHITECTURE.md",
+        "workbench/architecture/DATA_MODEL.md",
+        "workbench/architecture/API_DESIGN.md",
+        "workbench/architecture/AI_DESIGN.md",
+    ):
+        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed"}, 3, 1)
+        score += part
+        blockers.extend(part_blockers)
+        warnings.extend(part_warnings)
+    arch = read_text(root / "workbench/architecture/ARCHITECTURE.md")
+    if all(term in arch for term in ("\u8d28\u91cf\u5c5e\u6027", "\u98ce\u9669", "\u9a8c\u8bc1\u65b9\u5f0f")):
+        score += 3
+    else:
+        warnings.append("ARCHITECTURE.md should include quality attributes, risks, and verification method")
+    return component_result("architecture", score, WEIGHTS["architecture"], blockers, warnings)
+
+
+def score_delivery(root: Path) -> dict:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    score = 0
+    for rel in ("workbench/delivery/RELEASE_PLAN.md", "workbench/delivery/ITERATION_PLAN.md", "workbench/delivery/TASK_BREAKDOWN.md"):
+        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed", "active"}, 3, 1)
+        score += part
+        blockers.extend(part_blockers)
+        warnings.extend(part_warnings)
+    release = read_text(root / "workbench/delivery/RELEASE_PLAN.md")
+    if "\u56de\u6eda" in release:
+        score += 1
+    else:
+        warnings.append("RELEASE_PLAN.md should include rollback evidence")
+    return component_result("delivery", score, WEIGHTS["delivery"], blockers, warnings)
+
+
+def score_features(root: Path) -> dict:
+    feature_root = root / "workbench" / "features"
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if not feature_root.exists():
+        return component_result("features", 8, WEIGHTS["features"], blockers, ["No feature packages yet; acceptable before feature development"])
+    packages = [item for item in sorted(feature_root.iterdir()) if item.is_dir()]
+    if not packages:
+        return component_result("features", 8, WEIGHTS["features"], blockers, ["workbench/features exists but has no feature package"])
+    package_scores: list[int] = []
+    for package in packages:
+        rel_package = package.relative_to(root).as_posix()
+        missing = [filename for filename in FEATURE_PACKAGE_FILES if not (package / filename).exists()]
+        if missing:
+            blockers.append(f"{rel_package} missing files: {', '.join(missing)}")
+            package_scores.append(0)
+            continue
+        checklist = read_text(package / "CHECKLIST.md")
+        feature_status = (field(checklist, "feature_status") or "active").lower()
+        if feature_status == "on_hold":
+            package_scores.append(12)
+            continue
+        if feature_status != "complete":
+            warnings.append(f"{rel_package} is {feature_status}")
+            package_scores.append(8)
+            continue
+        if not has_unchecked_item(package / "CHECKLIST.md") and not has_unchecked_item(package / "TASKS.md"):
+            package_scores.append(20)
+        else:
+            blockers.append(f"{rel_package} complete but still has unchecked tasks or gates")
+            package_scores.append(12)
+    score = min(package_scores) if package_scores else 8
+    return component_result("features", score, WEIGHTS["features"], blockers, warnings)
+
+
+def score_verification(root: Path, called_from_quality_gate: bool) -> dict:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    marker = root / ".workbench-validation" / "quality-gate-ok.json"
+    score = 0
+    if marker.exists():
+        score += 4
+    elif called_from_quality_gate:
+        warnings.append(".workbench-validation/quality-gate-ok.json is not expected yet because scorecard is running inside the current quality gate")
+        score += 2
+    else:
+        warnings.append(".workbench-validation/quality-gate-ok.json is missing; treat this as historical gate evidence, not current proof")
+    quality_gate = root / "workbench" / "quality" / "quality_gate.py"
+    gate_text = read_text(quality_gate)
+    if quality_gate.exists() and "run_scorecard" in gate_text and "--called-from-quality-gate" in gate_text:
+        score += 6
+    elif quality_gate.exists() and "run_scorecard" in gate_text:
+        score += 4
+        warnings.append("quality_gate.py calls scorecard.py but does not pass --called-from-quality-gate")
+    else:
+        blockers.append("quality_gate.py does not call scorecard.py for evidence reporting")
+    return component_result("verification", score, WEIGHTS["verification"], blockers, warnings)
+
+
+def score_feedback(root: Path) -> dict:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    score = 0
+    for rel in ("workbench/feedback/FAILURE_LOG.md", "workbench/feedback/ITERATION_LOG.md", "workbench/feedback/AI_EFFECTIVENESS.md"):
+        if (root / rel).exists():
+            score += 1
+        else:
+            blockers.append(f"missing {rel}")
+    effectiveness = read_text(root / "workbench/feedback/AI_EFFECTIVENESS.md")
+    if "\u8fd4\u5de5" in effectiveness and "\u8d28\u91cf\u95e8" in effectiveness:
+        score += 2
+    else:
+        warnings.append("AI_EFFECTIVENESS.md should track rework and quality-gate failures")
+    return component_result("feedback", score, WEIGHTS["feedback"], blockers, warnings)
+
+
+def score_calibration(root: Path) -> tuple[dict, list[str], list[str]]:
+    path = root / "workbench" / "scorecard" / "CALIBRATION.md"
+    scorecard_path = root / "workbench" / "scorecard" / "SCORECARD.md"
+    text = read_text(path)
+    scorecard = read_text(scorecard_path)
+    blockers: list[str] = []
+    warnings: list[str] = []
+    status = (field(text, "calibration_status") or field(scorecard, "calibration_status") or "missing").lower()
+    has_anchor_examples = contains_filled_table_row(section_between(text, "\u951a\u5b9a\u6837\u4f8b"))
+    has_human_spotcheck = contains_filled_table_row(section_between(text, "\u4eba\u5de5\u62bd\u67e5"))
+    has_false_positive_record = "\u8bef\u62a5" in text
+    has_false_negative_record = "\u6f0f\u62a5" in text
+    has_reference_line_change_log = "\u53c2\u8003\u7ebf\u8c03\u6574" in text
+    has_threshold_change_log = has_reference_line_change_log or "\u9608\u503c\u8c03\u6574" in text
+    if not path.exists():
+        blockers.append("CALIBRATION.md is missing")
+    if status == "missing":
+        warnings.append("CALIBRATION.md missing calibration_status")
+    elif status not in ACCEPTED_CALIBRATION_STATUSES:
+        warnings.append(f"CALIBRATION.md calibration_status is {status}, not calibrated/reviewed/accepted_with_risk")
+    if not has_anchor_examples:
+        warnings.append("CALIBRATION.md has no filled anchor-example evidence")
+    if not has_human_spotcheck:
+        warnings.append("CALIBRATION.md has no filled human spot-check evidence")
+    return {
+        "status": status,
+        "acceptedStatuses": sorted(ACCEPTED_CALIBRATION_STATUSES),
+        "hasAnchorExamples": has_anchor_examples,
+        "hasHumanSpotcheck": has_human_spotcheck,
+        "tracksFalsePositives": has_false_positive_record,
+        "tracksFalseNegatives": has_false_negative_record,
+        "hasReferenceLineChangeLog": has_reference_line_change_log,
+        "hasThresholdChangeLog": has_threshold_change_log,
+        "isCalibrated": status in ACCEPTED_CALIBRATION_STATUSES and has_anchor_examples and has_human_spotcheck,
+    }, blockers, warnings
+
+
+def score_semantic_review(root: Path, require_semantic_review: bool) -> tuple[dict, list[str], list[str]]:
+    scorecard = read_text(root / "workbench" / "scorecard" / "SCORECARD.md")
+    blockers: list[str] = []
+    warnings: list[str] = []
+    semantic_status = (field(scorecard, "semantic_review_status") or "missing").lower()
+    if semantic_status not in ACCEPTED_REVIEW_STATUSES:
+        message = "SCORECARD.md semantic_review_status is not passed, accepted_with_risk, or not_required"
+        if require_semantic_review:
+            blockers.append(message)
+        else:
+            warnings.append(message)
+    architecture_status = (field(scorecard, "architecture_review_status") or "missing").lower()
+    if architecture_status not in ACCEPTED_REVIEW_STATUSES:
+        message = "SCORECARD.md architecture_review_status is not passed, accepted_with_risk, or not_required"
+        if require_semantic_review:
+            blockers.append(message)
+        else:
+            warnings.append(message)
+    if "\u786c\u963b\u585e" not in scorecard or "\u67b6\u6784\u5408\u7406\u6027" not in scorecard:
+        blockers.append("SCORECARD.md is missing scorecard structure cues")
+    return {
+        "semanticReviewStatus": semantic_status,
+        "architectureReviewStatus": architecture_status,
+        "acceptedStatuses": sorted(ACCEPTED_REVIEW_STATUSES),
+        "required": require_semantic_review,
+    }, blockers, warnings
+
+
+def component_floor_violations(components: list[dict], min_percent: int) -> list[dict]:
+    return [
+        {
+            "component": component["name"],
+            "percent": component["percent"],
+            "minPercent": min_percent,
+        }
+        for component in components
+        if component["percent"] < min_percent
+    ]
+
+
+def confidence_level(blockers: list[str], warnings: list[str], calibration: dict, semantic_review: dict, floor_violations: list[dict]) -> tuple[str, list[str]]:
+    reasons: list[str] = []
+    if blockers:
+        reasons.append("Blockers exist; the score cannot be used as pass evidence.")
+        return "low", reasons
+    if floor_violations:
+        reasons.append("A component floor violation may hide local risk behind a good total score.")
+    if not calibration["isCalibrated"]:
+        reasons.append("The scoring rubric has not been calibrated with anchor examples and human spot checks.")
+    if semantic_review["semanticReviewStatus"] not in ACCEPTED_REVIEW_STATUSES:
+        reasons.append("Semantic review is incomplete or failed.")
+    if semantic_review["architectureReviewStatus"] not in ACCEPTED_REVIEW_STATUSES:
+        reasons.append("Architecture review is incomplete or failed.")
+    if len(warnings) >= 10:
+        reasons.append("Too many warnings; manually review score confidence.")
+    if not reasons:
+        return "high", ["No obvious blockers, component floor gaps, calibration gaps, or semantic-review gaps."]
+    if len(reasons) >= 3 or floor_violations:
+        return "low", reasons
+    return "medium", reasons
+
+
+def calculate(root: Path, profile: str, called_from_quality_gate: bool = False) -> dict:
+    rules = profile_rules(profile)
+    components = [
+        score_intake(root),
+        score_product(root),
+        score_design(root),
+        score_architecture(root),
+        score_delivery(root),
+        score_features(root),
+        score_verification(root, called_from_quality_gate),
+        score_feedback(root),
+    ]
+    semantic_review, semantic_blockers, semantic_warnings = score_semantic_review(root, rules["require_semantic_review"])
+    calibration, calibration_blockers, calibration_warnings = score_calibration(root)
+    total = sum(component["score"] for component in components)
+    max_total = sum(component["maxScore"] for component in components)
+    floor_violations = component_floor_violations(components, rules["min_component_percent"])
+    blockers = semantic_blockers[:] + calibration_blockers[:]
+    warnings = semantic_warnings[:] + calibration_warnings[:]
+    for component in components:
+        blockers.extend(component["blockers"])
+        warnings.extend(component["warnings"])
+    if rules["require_calibration"] and not calibration["isCalibrated"]:
+        blockers.append("full profile requires calibrated scorecard evidence in CALIBRATION.md")
+    for violation in floor_violations:
+        message = f"{violation['component']} component {violation['percent']}% is below {violation['minPercent']}% floor for {profile}"
+        if rules["component_floor_is_blocker"]:
+            blockers.append(message)
+        else:
+            warnings.append(message)
+    percentage = round(total * 100 / max_total, 1) if max_total else 0
+    confidence, confidence_reasons = confidence_level(blockers, warnings, calibration, semantic_review, floor_violations)
+    if blockers:
+        level = "blocked"
+    elif percentage >= 90:
+        level = "release-ready"
+    elif percentage >= 75:
+        level = "usable-with-known-risks"
+    elif percentage >= 60:
+        level = "prototype-only"
+    else:
+        level = "not-ready"
+    if blockers:
+        decision = "BLOCKED"
+    elif confidence == "high":
+        decision = "PASS"
+    else:
+        decision = "PASS_WITH_RISK"
+    return {
+        "schema": "codex-workbench-scorecard/v1",
+        "timestamp": utc_now(),
+        "projectRoot": str(root),
+        "profile": profile,
+        "calledFromQualityGate": called_from_quality_gate,
+        "profileRules": rules,
+        "scoreMeaning": "evidence_maturity_and_process_consistency_only",
+        "decision": decision,
+        "decisionMeaning": "BLOCKED blocks delivery; PASS_WITH_RISK requires human review of warnings, confidence, calibration, and semantic review before treating the work as done.",
+        "totalScore": total,
+        "maxScore": max_total,
+        "percentage": percentage,
+        "level": level,
+        "confidence": confidence,
+        "confidenceReasons": confidence_reasons,
+        "calibration": calibration,
+        "semanticReview": semantic_review,
+        "componentFloorViolations": floor_violations,
+        "components": components,
+        "blockers": blockers,
+        "warnings": warnings,
+        "limitations": [
+            "Scorecard does not prove product correctness, architecture suitability, security/privacy acceptance, or AI eval quality.",
+            "High scores must not override blockers, low confidence, missing calibration, missing semantic review, or failed quality gates.",
+            "Reference scores and component floors are triage signals, not release gates by themselves.",
+            "Treat score changes as signals for review and improvement, not as a target to game.",
+        ],
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", choices=["smoke", "standard", "full"], default="standard")
+    parser.add_argument("--write-report", action="store_true")
+    parser.add_argument("--called-from-quality-gate", action="store_true")
+    parser.add_argument("--enforce-blockers", action="store_true", help="Return non-zero only for hard blockers, not for low evidence score.")
+    args = parser.parse_args()
+    root = project_root()
+    report = calculate(root, args.profile, args.called_from_quality_gate)
+    rules = profile_rules(args.profile)
+    report["referenceRules"] = rules
+    if args.write_report:
+        out_dir = root / ".workbench-validation"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "scorecard-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({
+        "decision": report["decision"],
+        "score": report["totalScore"],
+        "maxScore": report["maxScore"],
+        "percentage": report["percentage"],
+        "level": report["level"],
+        "confidence": report["confidence"],
+        "blockers": len(report["blockers"]),
+        "warnings": len(report["warnings"]),
+        "componentFloorViolations": len(report["componentFloorViolations"]),
+        "calibrationStatus": report["calibration"]["status"],
+    }, ensure_ascii=False))
+    if args.enforce_blockers and len(report["blockers"]) > rules["max_blockers"]:
+        print("[scorecard] blockers exist", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+'''
+    return script.replace("__FEATURE_PACKAGE_FILES__", feature_files_json).replace("__REQUIRED_ADAPTER_FILES__", required_adapter_files_json)
 
 
 def generate_py_wrapper(script_name: str) -> str:
@@ -1308,6 +2070,26 @@ def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]
         "DEVELOPMENT_FLOW.md": render_template("DEVELOPMENT_FLOW.md", variables, generate_development_flow_md(name, inspection)),
         "PRODUCT_BASELINE.md": render_template("PRODUCT_BASELINE.md", variables, ""),
         "FEATURE_WORKFLOW.md": render_template("FEATURE_WORKFLOW.md", variables, ""),
+        "workbench/product/PRODUCT_BRIEF.md": render_template("workbench/product/PRODUCT_BRIEF.md", variables, ""),
+        "workbench/product/PRD.md": render_template("workbench/product/PRD.md", variables, ""),
+        "workbench/product/ROADMAP.md": render_template("workbench/product/ROADMAP.md", variables, ""),
+        "workbench/design/UX_SPEC.md": render_template("workbench/design/UX_SPEC.md", variables, ""),
+        "workbench/design/PROTOTYPE.md": render_template("workbench/design/PROTOTYPE.md", variables, ""),
+        "workbench/design/USER_FLOW.md": render_template("workbench/design/USER_FLOW.md", variables, ""),
+        "workbench/architecture/ARCHITECTURE.md": render_template("workbench/architecture/ARCHITECTURE.md", variables, ""),
+        "workbench/architecture/DATA_MODEL.md": render_template("workbench/architecture/DATA_MODEL.md", variables, ""),
+        "workbench/architecture/API_DESIGN.md": render_template("workbench/architecture/API_DESIGN.md", variables, ""),
+        "workbench/architecture/AI_DESIGN.md": render_template("workbench/architecture/AI_DESIGN.md", variables, ""),
+        "workbench/architecture/adr/README.md": render_template("workbench/architecture/adr/README.md", variables, ""),
+        "workbench/delivery/RELEASE_PLAN.md": render_template("workbench/delivery/RELEASE_PLAN.md", variables, ""),
+        "workbench/delivery/ITERATION_PLAN.md": render_template("workbench/delivery/ITERATION_PLAN.md", variables, ""),
+        "workbench/delivery/TASK_BREAKDOWN.md": render_template("workbench/delivery/TASK_BREAKDOWN.md", variables, ""),
+        "workbench/scorecard/RUBRIC.md": render_template("workbench/scorecard/RUBRIC.md", variables, ""),
+        "workbench/scorecard/SCORECARD.md": render_template("workbench/scorecard/SCORECARD.md", variables, ""),
+        "workbench/scorecard/CALIBRATION.md": render_template("workbench/scorecard/CALIBRATION.md", variables, ""),
+        "workbench/scorecard/scorecard.py": generate_scorecard_py(),
+        "workbench/scorecard/scorecard.ps1": generate_py_wrapper("scorecard.py"),
+        "workbench/scorecard/scorecard.sh": generate_sh_wrapper("scorecard.py"),
         "workbench/quality/quality_gate.py": generate_quality_gate_py(inspection["qualityCommands"]),
         "workbench/quality/quality-gate.ps1": generate_py_wrapper("quality_gate.py"),
         "workbench/quality/quality-gate.sh": generate_sh_wrapper("quality_gate.py"),
@@ -1318,6 +2100,8 @@ def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]
         "workbench/runtime/api-smoke.ps1": generate_py_wrapper("api_smoke.py"),
         "workbench/runtime/api-smoke.sh": generate_sh_wrapper("api_smoke.py"),
         "workbench/feedback/FAILURE_LOG.md": render_template("workbench/feedback/FAILURE_LOG.md", variables, ""),
+        "workbench/feedback/ITERATION_LOG.md": render_template("workbench/feedback/ITERATION_LOG.md", variables, ""),
+        "workbench/feedback/AI_EFFECTIVENESS.md": render_template("workbench/feedback/AI_EFFECTIVENESS.md", variables, ""),
         "workbench/review/independent-review-prompt.md": render_template(
             "workbench/review/independent-review-prompt.md",
             variables,
@@ -1325,12 +2109,15 @@ def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]
         ),
         "workbench/feature-template/SPEC.md": render_template("workbench/feature-template/SPEC.md", variables, ""),
         "workbench/feature-template/CLARIFY.md": render_template("workbench/feature-template/CLARIFY.md", variables, ""),
+        "workbench/feature-template/DESIGN.md": render_template("workbench/feature-template/DESIGN.md", variables, ""),
         "workbench/feature-template/PLAN.md": render_template("workbench/feature-template/PLAN.md", variables, ""),
         "workbench/feature-template/TASKS.md": render_template("workbench/feature-template/TASKS.md", variables, ""),
         "workbench/feature-template/DECISIONS.md": render_template("workbench/feature-template/DECISIONS.md", variables, ""),
+        "workbench/feature-template/IMPLEMENTATION_NOTES.md": render_template("workbench/feature-template/IMPLEMENTATION_NOTES.md", variables, ""),
         "workbench/feature-template/CHECKLIST.md": render_template("workbench/feature-template/CHECKLIST.md", variables, ""),
         "workbench/feature-template/VERIFY.md": render_template("workbench/feature-template/VERIFY.md", variables, ""),
         "workbench/feature-template/REVIEW.md": render_template("workbench/feature-template/REVIEW.md", variables, ""),
+        "workbench/feature-template/CHANGELOG.md": render_template("workbench/feature-template/CHANGELOG.md", variables, ""),
     }
 
 
@@ -1584,12 +2371,14 @@ def feature_package_state(package: Path) -> dict[str, Any]:
         "classificationReason": frontmatter_field(spec, "classification_reason"),
         "specStatus": (frontmatter_field(spec, "status") or "draft").lower(),
         "clarifyStatus": (frontmatter_field(texts.get("CLARIFY.md", ""), "status") or "blocked").lower(),
+        "designStatus": (frontmatter_field(texts.get("DESIGN.md", ""), "status") or "draft").lower(),
         "planStatus": (frontmatter_field(texts.get("PLAN.md", ""), "status") or "draft").lower(),
         "tasksStatus": (frontmatter_field(texts.get("TASKS.md", ""), "status") or "draft").lower(),
         "implementationAllowed": frontmatter_bool(checklist, "implementation_allowed"),
         "deliveryAllowed": frontmatter_bool(checklist, "delivery_allowed"),
         "specApprovedForPlan": frontmatter_bool(texts.get("SPEC.md", ""), "approved_for_plan"),
         "clarifyReadyForPlan": frontmatter_bool(texts.get("CLARIFY.md", ""), "ready_for_plan"),
+        "designApprovedForPlan": frontmatter_bool(texts.get("DESIGN.md", ""), "approved_for_plan"),
         "planApprovedForTasks": frontmatter_bool(texts.get("PLAN.md", ""), "approved_for_tasks"),
         "planApprovedForImplementation": frontmatter_bool(texts.get("PLAN.md", ""), "approved_for_implementation"),
         "tasksReadyForImplementation": frontmatter_bool(texts.get("TASKS.md", ""), "ready_for_implementation"),
@@ -1651,6 +2440,8 @@ def feature_state_errors(state: dict[str, Any]) -> list[str]:
         errors.append(f"invalid SPEC.md status '{state['specStatus']}'")
     if state["clarifyStatus"] not in CLARIFY_STATUSES:
         errors.append(f"invalid CLARIFY.md status '{state['clarifyStatus']}'")
+    if state["designStatus"] not in DESIGN_STATUSES:
+        errors.append(f"invalid DESIGN.md status '{state['designStatus']}'")
     if state["planStatus"] not in PLAN_STATUSES:
         errors.append(f"invalid PLAN.md status '{state['planStatus']}'")
     if state["tasksStatus"] not in TASKS_STATUSES:
@@ -1663,6 +2454,8 @@ def feature_state_errors(state: dict[str, Any]) -> list[str]:
         errors.append("current_stage reached plan before SPEC.md was approved_for_plan")
     if feature_stage_reached(state, "plan") and (state["clarifyStatus"] not in {"ready", "deferred"} or not state["clarifyReadyForPlan"]):
         errors.append("current_stage reached plan before CLARIFY.md was ready_for_plan")
+    if feature_stage_reached(state, "plan") and (state["designStatus"] != "approved" or not state["designApprovedForPlan"]):
+        errors.append("current_stage reached plan before DESIGN.md was approved_for_plan")
     if feature_stage_reached(state, "tasks") and (state["planStatus"] != "approved" or not state["planApprovedForTasks"]):
         errors.append("current_stage reached tasks before PLAN.md was approved_for_tasks")
     if feature_stage_reached(state, "implement") and (not state["planApprovedForImplementation"] or state["tasksStatus"] != "ready" or not state["tasksReadyForImplementation"]):
@@ -1805,6 +2598,8 @@ def audit_adapter(project: Path) -> dict[str, Any]:
                 findings.append(issue("P2", "spec-not-approved", "SPEC.md is not approved for planning.", f"{rel_package}/SPEC.md"))
             if not state["clarifyReadyForPlan"]:
                 findings.append(issue("P2", "clarify-not-ready", "CLARIFY.md is not ready for planning.", f"{rel_package}/CLARIFY.md"))
+            if not state["designApprovedForPlan"]:
+                findings.append(issue("P2", "design-not-approved", "DESIGN.md is not approved for planning.", f"{rel_package}/DESIGN.md"))
             if not state["planApprovedForTasks"] or not state["planApprovedForImplementation"]:
                 findings.append(issue("P2", "plan-not-approved", "PLAN.md is not approved for tasks and implementation.", f"{rel_package}/PLAN.md"))
             if not state["tasksReadyForImplementation"]:
@@ -1837,6 +2632,11 @@ def audit_adapter(project: Path) -> dict[str, Any]:
 
     quality_gate = project / "workbench" / "quality" / "quality_gate.py"
     commands = python_literal_from_assign(quality_gate, "COMMANDS") if quality_gate.exists() else None
+    quality_gate_text = read_text_safe(quality_gate) if quality_gate.exists() else ""
+    if quality_gate.exists() and "run_scorecard" not in quality_gate_text:
+        findings.append(issue("P1", "scorecard-report-not-generated", "Quality gate does not call workbench/scorecard/scorecard.py, so evidence reporting can be skipped.", "workbench/quality/quality_gate.py"))
+    elif quality_gate.exists() and "--called-from-quality-gate" not in quality_gate_text:
+        findings.append(issue("P2", "scorecard-missing-gate-context", "Quality gate calls scorecard.py without --called-from-quality-gate, so current-run quality-gate evidence may be interpreted as missing history.", "workbench/quality/quality_gate.py"))
     if commands == []:
         findings.append(issue("P1", "empty-quality-gate", "Quality gate has zero configured checks. This is not a hard gate for a code project.", "workbench/quality/quality_gate.py"))
     elif isinstance(commands, list):
@@ -1848,6 +2648,29 @@ def audit_adapter(project: Path) -> dict[str, Any]:
     report_path = project / REPORT_DIR / "workbench-adapter-report.json"
     if not report_path.exists():
         findings.append(issue("P2", "missing-generation-report", "Generation report is missing; regenerate or save an audit trail.", rel_to(project, report_path)))
+
+    scorecard_script = project / "workbench" / "scorecard" / "scorecard.py"
+    if scorecard_script.exists():
+        scorecard_text = read_text_safe(scorecard_script)
+        if "WEIGHTS" not in scorecard_text or "PROFILE_RULES" not in scorecard_text:
+            findings.append(issue("P1", "invalid-scorecard-script", "scorecard.py is missing WEIGHTS or PROFILE_RULES.", "workbench/scorecard/scorecard.py"))
+        for required in ("decision", "confidence", "calibration", "componentFloorViolations", "PROFILE_RULES", "calledFromQualityGate"):
+            if required not in scorecard_text:
+                findings.append(issue("P1", "weak-scorecard-script", f"scorecard.py is missing evidence-audit field: {required}", "workbench/scorecard/scorecard.py"))
+    scorecard_doc = project / "workbench" / "scorecard" / "SCORECARD.md"
+    if scorecard_doc.exists():
+        scorecard_text = read_text_safe(scorecard_doc)
+        if "semantic_review_status:" not in scorecard_text or "architecture_review_status:" not in scorecard_text:
+            findings.append(issue("P2", "missing-semantic-score-fields", "SCORECARD.md should expose semantic_review_status and architecture_review_status.", "workbench/scorecard/SCORECARD.md"))
+        for required in ("score_confidence:", "calibration_status:", "误报", "漏报"):
+            if required not in scorecard_text:
+                findings.append(issue("P2", "missing-scorecard-trust-field", f"SCORECARD.md should expose scoring trust field: {required}", "workbench/scorecard/SCORECARD.md"))
+    calibration_doc = project / "workbench" / "scorecard" / "CALIBRATION.md"
+    if calibration_doc.exists():
+        calibration_text = read_text_safe(calibration_doc)
+        for required in ("calibration_status:", "锚定样例", "人工抽查", "误报", "漏报", "参考线调整"):
+            if required not in calibration_text:
+                findings.append(issue("P2", "missing-scorecard-calibration-field", f"CALIBRATION.md should include calibration field: {required}", "workbench/scorecard/CALIBRATION.md"))
 
     precommit = detect_precommit(project)
     if not precommit:
@@ -2014,17 +2837,33 @@ def run_golden_case(name: str, builder: Any) -> dict[str, Any]:
         assert_condition((root / "DEVELOPMENT_FLOW.md").exists(), f"{name}: DEVELOPMENT_FLOW.md was not generated", failures)
         assert_condition((root / "PRODUCT_BASELINE.md").exists(), f"{name}: PRODUCT_BASELINE.md was not generated", failures)
         assert_condition((root / "FEATURE_WORKFLOW.md").exists(), f"{name}: FEATURE_WORKFLOW.md was not generated", failures)
+        assert_condition((root / "workbench" / "product" / "PRODUCT_BRIEF.md").exists(), f"{name}: PRODUCT_BRIEF.md was not generated", failures)
+        assert_condition((root / "workbench" / "product" / "PRD.md").exists(), f"{name}: PRD.md was not generated", failures)
+        assert_condition((root / "workbench" / "design" / "UX_SPEC.md").exists(), f"{name}: UX_SPEC.md was not generated", failures)
+        assert_condition((root / "workbench" / "architecture" / "ARCHITECTURE.md").exists(), f"{name}: ARCHITECTURE.md was not generated", failures)
+        assert_condition((root / "workbench" / "delivery" / "ITERATION_PLAN.md").exists(), f"{name}: ITERATION_PLAN.md was not generated", failures)
+        assert_condition((root / "workbench" / "scorecard" / "RUBRIC.md").exists(), f"{name}: scorecard RUBRIC was not generated", failures)
+        assert_condition((root / "workbench" / "scorecard" / "SCORECARD.md").exists(), f"{name}: scorecard SCORECARD was not generated", failures)
+        assert_condition((root / "workbench" / "scorecard" / "CALIBRATION.md").exists(), f"{name}: scorecard CALIBRATION was not generated", failures)
+        assert_condition((root / "workbench" / "scorecard" / "scorecard.py").exists(), f"{name}: scorecard.py was not generated", failures)
+        assert_condition("run_scorecard" in (root / "workbench" / "quality" / "quality_gate.py").read_text(encoding="utf-8"), f"{name}: quality gate does not call scorecard", failures)
+        assert_condition((root / "workbench" / "feedback" / "AI_EFFECTIVENESS.md").exists(), f"{name}: AI_EFFECTIVENESS.md was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "SPEC.md").exists(), f"{name}: feature SPEC template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "CLARIFY.md").exists(), f"{name}: feature CLARIFY template was not generated", failures)
+        assert_condition((root / "workbench" / "feature-template" / "DESIGN.md").exists(), f"{name}: feature DESIGN template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "DECISIONS.md").exists(), f"{name}: feature DECISIONS template was not generated", failures)
+        assert_condition((root / "workbench" / "feature-template" / "IMPLEMENTATION_NOTES.md").exists(), f"{name}: feature IMPLEMENTATION_NOTES template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "CHECKLIST.md").exists(), f"{name}: feature CHECKLIST template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "VERIFY.md").exists(), f"{name}: feature VERIFY template was not generated", failures)
+        assert_condition((root / "workbench" / "feature-template" / "CHANGELOG.md").exists(), f"{name}: feature CHANGELOG template was not generated", failures)
         feature_preview = create_feature_package(root, "User Login", dry_run=True, force=False)
         assert_condition(feature_preview["featureSlug"] == "user-login", f"{name}: feature slug was not normalized", failures)
         feature = create_feature_package(root, "User Login", dry_run=False, force=False)
         assert_condition((root / "workbench" / "features" / "user-login" / "SPEC.md").exists(), f"{name}: feature package SPEC was not created", failures)
         assert_condition((root / "workbench" / "features" / "user-login" / "CLARIFY.md").exists(), f"{name}: feature package CLARIFY was not created", failures)
+        assert_condition((root / "workbench" / "features" / "user-login" / "DESIGN.md").exists(), f"{name}: feature package DESIGN was not created", failures)
         assert_condition((root / "workbench" / "features" / "user-login" / "DECISIONS.md").exists(), f"{name}: feature package DECISIONS was not created", failures)
+        assert_condition((root / "workbench" / "features" / "user-login" / "CHANGELOG.md").exists(), f"{name}: feature package CHANGELOG was not created", failures)
         active_audit = audit_adapter(root)
         assert_condition(active_audit["summary"]["P1"] > 0 or active_audit["summary"]["P2"] > 0, f"{name}: active incomplete feature should be audited", failures)
         mark_feature_on_hold(root, "user-login")
@@ -2059,6 +2898,12 @@ def run_upgrade_golden_case() -> dict[str, Any]:
         assert_condition(preview["files"]["DEVELOPMENT_FLOW.md"]["action"] == "write-missing", "upgrade should add missing DEVELOPMENT_FLOW.md", failures)
         assert_condition(preview["files"]["PRODUCT_BASELINE.md"]["action"] == "write-missing", "upgrade should add missing PRODUCT_BASELINE.md", failures)
         assert_condition(preview["files"]["FEATURE_WORKFLOW.md"]["action"] == "write-missing", "upgrade should add missing FEATURE_WORKFLOW.md", failures)
+        assert_condition(preview["files"]["workbench/product/PRODUCT_BRIEF.md"]["action"] == "write-missing", "upgrade should add missing PRODUCT_BRIEF.md", failures)
+        assert_condition(preview["files"]["workbench/design/UX_SPEC.md"]["action"] == "write-missing", "upgrade should add missing UX_SPEC.md", failures)
+        assert_condition(preview["files"]["workbench/architecture/ARCHITECTURE.md"]["action"] == "write-missing", "upgrade should add missing ARCHITECTURE.md", failures)
+        assert_condition(preview["files"]["workbench/scorecard/RUBRIC.md"]["action"] == "write-missing", "upgrade should add missing scorecard RUBRIC.md", failures)
+        assert_condition(preview["files"]["workbench/scorecard/CALIBRATION.md"]["action"] == "write-missing", "upgrade should add missing scorecard CALIBRATION.md", failures)
+        assert_condition(preview["files"]["workbench/scorecard/scorecard.py"]["action"] == "write-missing", "upgrade should add missing scorecard.py", failures)
         assert_condition(preview["files"]["workbench/quality/quality_gate.py"]["action"] == "write-missing", "upgrade should add missing Python quality gate", failures)
         applied = upgrade_adapter(root, "old-workbench", dry_run=False, replace_docs=False, refresh_generated=False)
         validation = validate_adapter(root)
@@ -2068,8 +2913,15 @@ def run_upgrade_golden_case() -> dict[str, Any]:
         assert_condition((root / "DEVELOPMENT_FLOW.md").exists(), "upgrade did not write missing DEVELOPMENT_FLOW.md", failures)
         assert_condition((root / "PRODUCT_BASELINE.md").exists(), "upgrade did not write missing PRODUCT_BASELINE.md", failures)
         assert_condition((root / "FEATURE_WORKFLOW.md").exists(), "upgrade did not write missing FEATURE_WORKFLOW.md", failures)
+        assert_condition((root / "workbench" / "product" / "PRODUCT_BRIEF.md").exists(), "upgrade did not write missing PRODUCT_BRIEF.md", failures)
+        assert_condition((root / "workbench" / "design" / "UX_SPEC.md").exists(), "upgrade did not write missing UX_SPEC.md", failures)
+        assert_condition((root / "workbench" / "architecture" / "ARCHITECTURE.md").exists(), "upgrade did not write missing ARCHITECTURE.md", failures)
+        assert_condition((root / "workbench" / "scorecard" / "RUBRIC.md").exists(), "upgrade did not write scorecard RUBRIC.md", failures)
+        assert_condition((root / "workbench" / "scorecard" / "CALIBRATION.md").exists(), "upgrade did not write scorecard CALIBRATION.md", failures)
+        assert_condition((root / "workbench" / "scorecard" / "scorecard.py").exists(), "upgrade did not write scorecard.py", failures)
         assert_condition((root / "workbench" / "feature-template" / "TASKS.md").exists(), "upgrade did not write feature task template", failures)
         assert_condition((root / "workbench" / "feature-template" / "CLARIFY.md").exists(), "upgrade did not write feature clarify template", failures)
+        assert_condition((root / "workbench" / "feature-template" / "DESIGN.md").exists(), "upgrade did not write feature design template", failures)
         assert_condition((root / "workbench" / "feature-template" / "DECISIONS.md").exists(), "upgrade did not write feature decisions template", failures)
         assert_condition((root / "workbench" / "feature-template" / "CHECKLIST.md").exists(), "upgrade did not write feature checklist template", failures)
         assert_condition((root / "workbench" / "quality" / "quality_gate.py").exists(), "upgrade did not write missing quality_gate.py", failures)

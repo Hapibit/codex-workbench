@@ -3,12 +3,17 @@
   "include": [
     ".codex-plugin/plugin.json",
     "README.md",
+    "docs/WORKFLOW_AND_SCORECARD.md",
+    "docs/ITERATION_UPGRADE.md",
     "docs/USER_WORKBENCH.md",
     "docs/maintenance/**",
     "skills/codex-workbench/**"
   ],
   "exclude": [
     "internal/**",
+    "skills/codex-workbench/assets/assets/**",
+    "skills/codex-workbench/references/references/**",
+    "skills/codex-workbench/scripts/scripts/**",
     "**/__pycache__/**",
     "**/*.pyc",
     ".git/**",
@@ -23,6 +28,7 @@
     "Long-term maintainer evidence lives under docs/maintenance and is packaged for release review.",
     ".workbench-validation is generated validation output and must not be packaged.",
     "Optional enhancement packs are registered in skills/codex-workbench/assets/enhancements.json.",
+    "Nested assets/assets, references/references, and scripts/scripts are local sync residues and must not be packaged.",
     "Do not package internal legacy skill backups or Python cache files."
   ]
 }

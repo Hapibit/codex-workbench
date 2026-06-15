@@ -21,6 +21,76 @@
 
 ## 失败模式
 
+### FP-007 - scorecard 高分可能被当成质量证明
+
+失败模式：
+
+如果 scorecard 只输出总分，AI 或使用者可能通过补空文档、改状态字段、忽略语义复核来获得高分。这样分数会退化成形式指标，掩盖业务错误、架构风险、验证不足或 AI eval 漏洞。
+
+证据位置：
+
+- 用户明确担心“打分的问题”，要求减少 AI 幻觉和虚假高分。
+- `workbench/scorecard/RUBRIC.md` 原先只说明总分、阈值、硬阻塞和语义复核，没有独立校准文件。
+- `scorecard.py` 原先没有 `confidence`、`calibration`、`componentFloorViolations`，`full` 档也没有强制校准和语义/架构复核。
+
+工作台处理层：
+
+- 模板层：新增 `workbench/scorecard/CALIBRATION.md`，记录锚定样例、人工抽查、误报、漏报和阈值调整。
+- 脚本层：`scorecard.py` 输出可信度、校准状态、组件下限缺口和 profile 规则；`standard/full` 不允许用总分掩盖组件短板；`full` 要求校准和语义/架构复核。
+- 审计层：检查 scorecard 脚本是否包含可信度/校准字段，检查 `SCORECARD.md` 和 `CALIBRATION.md` 是否有必要字段。
+- 说明层：`RUBRIC.md`、`WORKBENCH.md` 和 references 明确分数不是业务正确性证明，低可信度高分不能通过。
+
+自动化状态：
+
+- 已自动化：生成、validate、audit、golden-test 和 package-check 都会覆盖 `CALIBRATION.md` 和新版 scorecard 字段。
+- 仍需人工：锚定样例、人工抽查、误报/漏报归因和业务语义判断必须由项目负责人、审查人或独立 AI 复核补充。
+
+### FP-006 - 没有严格打分导致流程完成度不可见
+
+失败模式：
+
+工作台有很多文档、功能包和质量门，但没有统一 scorecard 时，用户只能凭感觉判断当前项目是否准备好继续开发或交付。相反，如果只引入一个总分，AI 又可能拿高分绕过 open blocker、架构风险、语义复核和真实验收。
+
+证据位置：
+
+- `assets/project-adapter-template/` 曾没有 `workbench/scorecard/`。
+- `quality_gate.py` 曾只检查项目画像、功能包状态和项目命令，没有独立证据成熟度分数。
+- `audit` 曾不能发现质量门是否跳过 scorecard。
+
+工作台处理层：
+
+- 模板层：新增 `workbench/scorecard/RUBRIC.md` 和 `SCORECARD.md`。
+- 脚本层：新增生成式 `scorecard.py`，并由 `quality_gate.py` 调用。
+- 审计层：新增 `scorecard-not-enforced`、`invalid-scorecard-script`、`missing-semantic-score-fields` 等检查。
+- 说明层：在 AGENTS、WORKBENCH、REVIEW、PRODUCT_BASELINE 和 references 说明分数边界。
+
+自动化状态：
+
+- 已自动化：新项目生成 scorecard；quality gate 调用 scorecard；golden-test 检查 scorecard 文件和质量门调用。
+- 未完全自动化：业务目标、UX、架构合理性、安全/隐私和 AI eval 质量仍需要人工或独立 AI 语义复核。
+
+### FP-005 - 项目工作台缺少产品/UX/架构前置层
+
+失败模式：
+
+工作台能约束 AI 写代码和审查代码，但新项目从 0 到 1 时，AI 可能在没有产品简报、PRD、UX、原型、架构、交付计划的情况下直接进入功能实现。结果是代码质量门通过了，但产品方向、交互路径、架构边界或后续迭代依据仍不清楚。
+
+证据位置：
+
+- `assets/project-adapter-template/` 曾只包含 `PROJECT_INTAKE.md`、`PRODUCT_BASELINE.md`、`DEVELOPMENT_FLOW.md`、`FEATURE_WORKFLOW.md` 和功能包模板。
+- 功能包曾缺少 `DESIGN.md`，导致从 CLARIFY 到 PLAN 之间没有独立承接 UX/架构/API/AI 设计的阶段。
+- 缺少 `AI_EFFECTIVENESS.md` 和 `ITERATION_LOG.md`，AI 修改后的效果和需求变化没有稳定归档位置。
+
+工作台处理层：
+
+- 模板层：新增 `workbench/product/`、`workbench/design/`、`workbench/architecture/`、`workbench/delivery/`、`workbench/feedback/AI_EFFECTIVENESS.md` 和 `ITERATION_LOG.md`。
+- 功能包层：新增 `DESIGN.md`、`IMPLEMENTATION_NOTES.md`、`CHANGELOG.md`。
+- 脚本层：`REQUIRED_ADAPTER_FILES`、`FEATURE_PACKAGE_FILES`、`validate`、`audit`、`quality_gate.py`、`golden-test` 都纳入新增文件和 DESIGN 阶段。
+
+自动化状态：
+
+- 已自动化：缺少新增文件会导致 validate/audit 失败；功能包进入 PLAN 前必须通过 DESIGN；package-check 确认个人 skill 和发布包 skill 同步。
+
 ### FP-004 - 模板有流程但缺少可复查证据
 
 失败模式：
@@ -106,3 +176,24 @@
 自动化状态：
 
 - 已部分自动化。发布检查要求 visible skill 只能是 `codex-workbench`。
+
+### FP-004 - 把 scorecard 误当成质量裁判
+
+失败模式：
+
+AI 或用户看到高分后，误以为产品目标、架构合理性、UX、AI eval、安全和代码质量都已经通过。实际上脚本只能检查证据是否存在、状态是否一致、质量门是否接入，不能证明业务判断正确。
+
+证据位置：
+
+- `quality_gate.py` 曾在写入 `.workbench-validation/quality-gate-ok.json` 前调用 scorecard，scorecard 又检查该标记，导致当前运行和历史证据边界不清。
+- 模板中曾使用“严格打分”“阈值通过”等措辞，容易让新用户把参考分当成硬质量证明。
+
+工作台处理层：
+
+- 脚本层：`scorecard.py` 输出 `decision`，并支持 `--called-from-quality-gate` 和 `--enforce-blockers`；质量门只因硬阻塞失败。
+- 说明层：`RUBRIC.md`、`SCORECARD.md`、`WORKBENCH.md` 改为“证据审计”，明确参考分和组件下限只是风险信号。
+- 复核层：产品、UX、架构、AI eval、安全和业务验收必须写入 `SCORECARD.md` 的人工或独立审查结论。
+
+自动化状态：
+
+- 已加入 `self-test`、`golden-test`、`doctor`、`package-check` 验证。后续如果真实项目中继续出现“高分低质量”，应把对应误报记录到 `CALIBRATION.md`，并优先改模板、质量门、CI、hook 或 review 检查。

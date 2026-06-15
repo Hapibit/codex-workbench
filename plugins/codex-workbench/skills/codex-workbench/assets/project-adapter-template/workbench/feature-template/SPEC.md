@@ -19,7 +19,7 @@ classification_reason: unclassified
 
 ## 事实源和来源
 
-本文件是当前功能的事实源。PLAN、TASKS、实现、VERIFY 和 REVIEW 都必须能追溯到这里。
+本文件是当前功能的事实源。DESIGN、PLAN、TASKS、实现、VERIFY 和 REVIEW 都必须能追溯到这里。
 
 来源依据：
 
@@ -30,7 +30,7 @@ classification_reason: unclassified
 
 变更规则：
 
-- 需求变化时先更新本 SPEC，再同步 PLAN、TASKS、VERIFY 和 REVIEW。
+- 需求变化时先更新本 SPEC，再同步 DESIGN、PLAN、TASKS、VERIFY、REVIEW 和 CHANGELOG。
 - 如果实现需要偏离本 SPEC，先写入 `DECISIONS.md`，再更新本文件或 PLAN。
 - 不允许把聊天里的临时说法当成最终需求，除非已经回填到本文件。
 

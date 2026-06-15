@@ -13,10 +13,11 @@ The workbench has one simple path. Keep the public path stable even if the inter
 
 ```text
 1. Understand the project
-2. Create or update the project workbench
-3. Use feature work packages for meaningful changes
-4. Run quality gates and review
-5. Feed repeated failures back into rules or automation
+2. Establish product, UX, architecture, and delivery facts when the project is 0-to-1 or materially changing
+3. Create or update the project workbench
+4. Use feature work packages for meaningful changes
+5. Run scorecard, quality gates, and review
+6. Feed requirement changes, AI failures, and review misses back into specs, templates, tests, gates, scorecards, or automation
 ```
 
 ## Internal Engine
@@ -47,6 +48,7 @@ If an optional specialist skill is missing, continue with the built-in workbench
 Separate public workbench concepts from internal implementation tools:
 
 - Public concepts: project intake, project workbench, feature work package, quality gate, runtime check, independent review, audit.
+- 0-to-1 concepts: product brief, PRD, UX spec, prototype, user flow, architecture, data model, API design, AI design, delivery plan, scorecard, iteration log, AI effectiveness.
 - Internal tools: bundled scripts, templates, references, optional specialist skills, MCP servers.
 - Generated project files should mostly describe public concepts and project-local commands, not require users to know internal skill names.
 - If an internal tool name is needed, keep it in plugin/skill docs or maintainer instructions, not as a prerequisite in project-local docs.
@@ -90,9 +92,11 @@ Do not make new users learn:
 Expose simple commands and artifacts:
 
 - project intake,
+- product/UX/architecture/delivery facts,
 - project workbench,
 - feature work package,
 - quality gate,
+- scorecard,
 - review.
 
 ## Third-Party Skill Policy

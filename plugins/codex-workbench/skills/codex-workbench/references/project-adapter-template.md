@@ -24,9 +24,12 @@ Required sections:
 Required sections:
 
 - What this project workbench contains and what each file owns.
+- How the standard 0-to-1 flow works: project intake -> product brief -> PRD -> UX/prototype -> architecture -> delivery plan -> feature package -> verification/review -> iteration.
 - How `PROJECT_INTAKE.md` preprocesses vague requirements before development-flow confirmation or feature work.
+- How product, design, architecture, delivery, and feedback folders map to durable facts rather than chat history.
 - How to run quality gate on Windows/macOS/Linux.
 - How to choose `--profile smoke|standard|full`.
+- How evidence auditing works through `workbench/scorecard/RUBRIC.md`, `SCORECARD.md`, `CALIBRATION.md`, and `scorecard.py`, including the boundary between deterministic evidence reporting and human/AI semantic review.
 - How to ask Codex Workbench to audit the project workbench when checking shareability or readiness.
 - How to interpret audit severities `P0` through `P3`.
 - How to run runtime gate and when `--apply` is allowed.
@@ -37,6 +40,8 @@ Required sections:
 - How to choose lightweight, medium, or heavyweight feature workflow so low-risk edits do not carry full SDD overhead.
 - How to turn repeated failures into updated rules or automated checks.
 - How single-feature failure evidence is stored in feature packages and repeated/cross-feature failures are summarized in `workbench/feedback/FAILURE_LOG.md`.
+- How AI implementation effectiveness is measured through `IMPLEMENTATION_NOTES.md`, `CHANGELOG.md`, `VERIFY.md`, `REVIEW.md`, `workbench/feedback/ITERATION_LOG.md`, and `workbench/feedback/AI_EFFECTIVENESS.md`.
+- How scorecard failures become updated templates, tests, gates, CI, hooks, or review criteria instead of a vanity metric.
 - How to upgrade an existing workbench without replacing project-specific docs.
 - What recipient setup is required.
 - What is not covered.
@@ -78,6 +83,60 @@ Required sections:
 - Acceptance questions that force the developer to reason about users, risks, and proof.
 - Delivery floor: changed files, validation evidence, unverified risks, and follow-up workbench improvements.
 
+## `workbench/product/`
+
+Required files:
+
+- `PRODUCT_BRIEF.md`: product brief with business goal, target users, success metrics, first-version scope, non-goals, and iteration rule.
+- `PRD.md`: product requirements with user stories, acceptance criteria, failure paths, non-goals, and change rule.
+- `ROADMAP.md`: version roadmap with priorities, dependencies, and validation evidence.
+
+## `workbench/design/`
+
+Required files:
+
+- `UX_SPEC.md`: interaction spec with user flows, page/component states, error/empty/loading/permission states, accessibility/usability checks, and iteration rule.
+- `PROTOTYPE.md`: prototype reference with Figma/image/HTML/design links, page structure, and prototype acceptance.
+- `USER_FLOW.md`: user flow map with entry, success path, failure path, and verification method.
+
+## `workbench/architecture/`
+
+Required files:
+
+- `ARCHITECTURE.md`: architecture design with modules, boundaries, data flow, risks, constraints, and ADR reference.
+- `DATA_MODEL.md`: entities, relationships, data ownership, permissions, and migration rules.
+- `API_DESIGN.md`: API contracts, errors, authz, compatibility, and verification.
+- `AI_DESIGN.md`: AI/RAG/agent inputs, outputs, tools, data sources, forbidden behavior, evals, and privacy.
+- `adr/README.md`: ADR template with Context, Decision, Alternatives, and Consequences.
+
+## `workbench/delivery/`
+
+Required files:
+
+- `RELEASE_PLAN.md`: release scope, validation, rollback, and risk.
+- `ITERATION_PLAN.md`: current iteration goal, scope, change handling, retest result, and next round.
+- `TASK_BREAKDOWN.md`: task pool that traces work back to PRD, UX, architecture, and feature specs.
+
+## `workbench/scorecard/`
+
+Required files:
+
+- `RUBRIC.md`: evidence-audit rules with weights, reference lines, hard blockers, and semantic-review boundary.
+- `SCORECARD.md`: current project evidence-audit card with decision history, reference score, confidence, blockers, architecture reasonableness review, semantic quality review, and improvement actions.
+- `CALIBRATION.md`: audit calibration record with anchor examples, human spot checks, false positives, false negatives, and reference-line change rationale.
+- `scorecard.py`: deterministic evidence-maturity reporter invoked by the quality gate.
+- `scorecard.ps1` and `scorecard.sh`: wrappers that only invoke `scorecard.py`.
+
+Scoring rules:
+
+- Report evidence maturity and process consistency, not business truth.
+- Treat hard blockers as failing regardless of total score.
+- Output `decision`, confidence, calibration status, component floor violations, and profile rules so a high score cannot hide weak evidence.
+- Require score calibration for `full` profile and record calibration evidence in `CALIBRATION.md`.
+- Require human or independent AI review for product correctness, UX quality, architecture reasonableness, AI eval quality, security/privacy judgment, and business acceptance.
+- Use false-positive and false-negative records to adjust templates, reference lines, quality gates, CI, hooks, or review criteria.
+- Quality gate must call `scorecard.py --called-from-quality-gate --enforce-blockers` after deterministic checks pass and before writing success markers.
+
 ## `FEATURE_WORKFLOW.md`
 
 Required sections:
@@ -87,7 +146,7 @@ Required sections:
 - L1 lightweight tasks may skip full feature packages but still require problem/change/verification/risk notes; L2 tasks create partial feature evidence; L3 tasks require the full SDD package; L4 emergency/major tasks allow minimal stop-the-bleeding work but require post-fix verification, review, retrospective, and prevention automation.
 - Dependency on `PROJECT_INTAKE.md` before writing feature SPEC files.
 - Target directory shape: `workbench/features/<feature-name>/`.
-- Stage flow: `SPEC.md` → `CLARIFY.md` → `PLAN.md` → `TASKS.md` → `DECISIONS.md` → `CHECKLIST.md` → implementation → `VERIFY.md` → `REVIEW.md`.
+- Stage flow: `SPEC.md` -> `CLARIFY.md` -> `DESIGN.md` -> `PLAN.md` -> `TASKS.md` -> `DECISIONS.md` -> `IMPLEMENTATION_NOTES.md` -> `CHECKLIST.md` -> implementation -> `VERIFY.md` -> `REVIEW.md` -> `CHANGELOG.md`.
 - Human confirmation points for unclear requirements, high-risk plans, unverified delivery, and P0/P1 findings.
 
 ## `workbench/feature-template/`
@@ -96,12 +155,15 @@ Required files:
 
 - `SPEC.md`: risk_level, impact_score, uncertainty_score, rollback_score, risk_score, hard_triggers, classification_reason, user goal, scope, input/output, permissions, acceptance criteria, failures, AI rules, questions.
 - `CLARIFY.md`: blocking questions, safe assumptions, confirmed facts, and a gate that prevents planning while blockers remain.
+- `DESIGN.md`: functional design with UX, architecture, data, API, permission, AI impact, risks, and approval gate before planning.
 - `PLAN.md`: technical approach, affected files, data/API/UI/AI changes, risks, verification plan.
 - `TASKS.md`: small executable tasks with verification notes.
 - `DECISIONS.md`: durable architectural/product decisions and implementation deviations from the plan.
+- `IMPLEMENTATION_NOTES.md`: AI implementation notes, deviations, problems, fixes, and retest evidence.
 - `CHECKLIST.md`: stage gates for risk classification, spec completeness, clarification resolution, plan coverage, task quality, verification, and review.
 - `VERIFY.md`: command results, manual checks, browser/API/AI eval evidence, unverified items, residual risks.
 - `REVIEW.md`: P0/P1 checks, product baseline checks, code quality checks, findings format, AI error evidence, automation follow-up.
+- `CHANGELOG.md`: requirement changes, implementation changes, retest results, and downstream file updates.
 
 ## `workbench/feedback/FAILURE_LOG.md`
 
@@ -111,6 +173,22 @@ Required sections:
 - Evidence location rule: single-feature evidence goes to `workbench/features/<feature-name>/VERIFY.md`, `REVIEW.md`, and `DECISIONS.md`.
 - Cross-feature or repeated problems go to `workbench/feedback/FAILURE_LOG.md`.
 - Failure entry template with source feature package, problem type, severity, symptom, root cause, fixed location, automation target, automation status, and review result.
+
+## `workbench/feedback/ITERATION_LOG.md`
+
+Required sections:
+
+- Change source, impacted layer, updated files, retest result, and next step.
+- Rule that single-feature evidence stays in feature package files first.
+- Rule that cross-feature repeated problems become template, test, gate, CI, hook, or review improvements.
+
+## `workbench/feedback/AI_EFFECTIVENESS.md`
+
+Required sections:
+
+- Metrics for first-pass rate, rework count, review findings, quality gate failures, and clarification count.
+- Records of what AI did, main issue, post-fix effect, and improvement action.
+- Rule that poor AI outcomes should be attributed to requirements, design, plan, tests, review, quality gate, or implementation before changing rules.
 
 ## `PROJECT_INTAKE.md`
 

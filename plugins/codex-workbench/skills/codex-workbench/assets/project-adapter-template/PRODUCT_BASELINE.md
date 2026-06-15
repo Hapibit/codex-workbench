@@ -2,12 +2,15 @@
 
 本文件定义个人开发者使用 AI 开发时的最低产品质量标准。它不是追求完美，而是防止功能“看起来写完了，实际不可用”。
 
-本文件应从 `PROJECT_INTAKE.md` 继承项目目标、第一版范围、用户角色、权限边界、数据类型和 AI 使用边界。项目画像没有确认前，本文件只能作为通用下限，不能替代真实产品验收。
+本文件应从 `PROJECT_INTAKE.md`、`workbench/product/PRODUCT_BRIEF.md`、`workbench/product/PRD.md`、`workbench/design/UX_SPEC.md` 和 `workbench/architecture/ARCHITECTURE.md` 继承项目目标、第一版范围、用户角色、权限边界、数据类型和 AI 使用边界。项目画像没有确认前，本文件只能作为通用下限，不能替代真实产品验收。
 
 执行原则：
 
 - 产品下限必须能追溯到 `PROJECT_INTAKE.md` 或功能 `SPEC.md`，不能只来自 AI 猜测。
+- 产品体验、页面状态和原型必须能追溯到 `UX_SPEC.md`、`PROTOTYPE.md` 或功能 `DESIGN.md`。
+- 技术边界、数据、API 和 AI 行为必须能追溯到 `ARCHITECTURE.md`、`DATA_MODEL.md`、`API_DESIGN.md`、`AI_DESIGN.md` 或 ADR。
 - 验收证据必须可复现：写清命令、步骤、输入、期望结果、实际结果和未验证原因。
+- 证据审计必须可复查：`workbench/scorecard/scorecard.py` 只报告证据成熟度、硬阻塞和可信度，`SCORECARD.md` 负责记录产品、UX、架构和 AI 语义复核。
 - 需求变更后，先更新项目画像或 SPEC，再判断代码是否要改；不要让代码反过来定义需求。
 
 ## 产品下限
@@ -35,6 +38,7 @@
 - 后端新增接口但没有认证授权、输入校验、错误响应或调用方验证。
 - AI 功能没有测试样例、禁止行为、来源约束、日志和隐私边界。
 - 用 Markdown 写“必须测试/必须审查”，但没有质量门、测试、CI、hook 或人工记录。
+- 只看 scorecard 总分，不处理硬阻塞、pending 语义复核或架构风险。
 
 ## 功能验收问题
 
@@ -42,6 +46,8 @@
 
 - 这个回答是否能在 `PROJECT_INTAKE.md` 中找到依据？
 - 这个功能是否能在对应 `SPEC.md` 中找到验收标准？
+- 交互是否能在 `UX_SPEC.md`、`PROTOTYPE.md` 或 `DESIGN.md` 找到依据？
+- 架构、数据、API 或 AI 行为是否能在 `workbench/architecture/` 找到依据？
 - 用户是谁？使用场景是什么？
 - 主成功路径是什么？
 - 至少一个失败路径是什么？
@@ -49,7 +55,7 @@
 - 怎么证明它真的可用？
 - 如果出错，用户和开发者分别能看到什么？
 - 这个改动是否影响旧接口、旧数据、旧页面或旧流程？
-- 如果需求已经变化，哪些 SPEC、PLAN、TASKS、VERIFY 或 REVIEW 需要同步更新？
+- 如果需求已经变化，哪些 PRD、UX、ARCHITECTURE、SPEC、DESIGN、PLAN、TASKS、VERIFY 或 REVIEW 需要同步更新？
 
 ## 交付下限
 
@@ -60,3 +66,4 @@
 - 哪些没有验证以及原因。
 - 剩余风险。
 - 是否需要更新测试、质量门、文档或工作台规则。
+- scorecard 是否通过，未通过时还缺什么证据。

@@ -15,15 +15,19 @@
 
 - 实现是否满足需求和验收标准，而不是只覆盖 happy path。
 - 实现是否能追溯到 `PROJECT_INTAKE.md` 或对应功能 `SPEC.md`，没有把聊天里的临时说法当成已确认需求。
+- 实现是否能追溯到 `workbench/product/PRD.md`，没有把非目标做进第一版。
+- UI/交互是否能追溯到 `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` 或功能 `DESIGN.md`。
+- 架构、数据、API 或 AI 行为是否能追溯到 `workbench/architecture/ARCHITECTURE.md`、`DATA_MODEL.md`、`API_DESIGN.md`、`AI_DESIGN.md` 或 ADR。
 - 用户可见功能是否满足 `PRODUCT_BASELINE.md` 的产品下限。
-- 新功能、跨模块或高风险改动是否有 `FEATURE_WORKFLOW.md` 要求的 SPEC/CLARIFY/PLAN/TASKS/DECISIONS/CHECKLIST/VERIFY/REVIEW 证据；如没有，是否有合理简化说明。
+- 新功能、跨模块或高风险改动是否有 `FEATURE_WORKFLOW.md` 要求的 SPEC/CLARIFY/DESIGN/PLAN/TASKS/DECISIONS/CHECKLIST/VERIFY/REVIEW 证据；如没有，是否有合理简化说明。
+- `workbench/scorecard/scorecard.py` 是否输出 `BLOCKED`、`PASS_WITH_RISK` 或 `PASS`，是否存在硬阻塞，`SCORECARD.md` 是否记录语义和架构复核状态。
 - 角色、资源、租户、组织、课程、用户、文件、订单等所有权边界是否被保留。
 - 公开 API、数据库 schema、前后端数据契约、事件/消息格式是否兼容。
 - 测试、lint、类型检查、构建或手动验证是否足以在行为破坏时失败。
 - secrets、tokens、cookies、日志、上传文件、外部调用和 AI 输出是否安全处理。
 - 错误处理、幂等性、重试、超时、回滚和部分失败场景是否可靠。
 - 改动是否避免无关重写、用户改动回滚和大范围格式化噪音。
-- 需求变化后，SPEC、PLAN、TASKS、VERIFY、REVIEW 是否同步更新。
+- 需求变化后，PRD、UX、ARCHITECTURE、SPEC、DESIGN、PLAN、TASKS、VERIFY、REVIEW、CHANGELOG 是否同步更新。
 - VERIFY 里的证据是否能证明验收标准，而不是只证明命令运行过。
 
 ## AI 生成代码额外检查
@@ -32,11 +36,14 @@
 - 是否绕过已有封装、权限检查、校验器、错误处理、日志规范或数据访问层。
 - 是否只新增实现而没有更新测试、文档、fixture、schema、mock 或 CI。
 - 是否把软规则写进 Markdown 后就当作硬门禁，而没有脚本/测试/CI 兜底。
+- 是否把高分或 `PASS_WITH_RISK` 当成业务正确性证明，忽略了 `SCORECARD.md` 中 pending 或 failed 的语义/架构复核。
 - 是否为了快速通过而直接修改状态字段、勾选清单或弱化验收标准。
+- AI 修改后的效果是否有记录：返工原因、质量门失败、审查发现和复测结果是否写入 `IMPLEMENTATION_NOTES.md`、`CHANGELOG.md`、`VERIFY.md`、`REVIEW.md` 或 `workbench/feedback/AI_EFFECTIVENESS.md`。
 
 ## 审查闭环
 
 - 如果发现的问题可以用测试、lint、类型检查、CI、pre-commit 或质量门捕获，修复方向里要明确建议对应自动化检查。
+- 如果发现的问题会影响证据审计口径，修复方向里要说明应更新 `workbench/scorecard/RUBRIC.md`、`SCORECARD.md` 或 `scorecard.py`。
 - 如果同类问题重复出现，建议把规则迁移到 `AGENTS.md`、`WORKBENCH.md`、`workbench/quality/quality_gate.py` 或独立审查提示中。
 - 如果审查结论依赖未运行的验证，必须把缺口写出来，不能把代码阅读当作实际通过。
 

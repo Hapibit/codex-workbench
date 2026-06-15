@@ -15,6 +15,7 @@ approved_at: unconfirmed
 方案依据：
 
 - 对应 SPEC 验收项：
+- 对应 DESIGN 设计项：
 - 沿用的项目结构/组件/服务：
 - 不采用新抽象或新依赖的原因：
 

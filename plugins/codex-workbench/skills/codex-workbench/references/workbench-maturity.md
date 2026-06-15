@@ -56,6 +56,7 @@ Required:
 - `FEATURE_WORKFLOW.md` explains when to create an SDD feature work package and when small fixes may simplify.
 - `FEATURE_WORKFLOW.md` includes a workload gate that checks hard triggers first, then scores impact, uncertainty, and rollback difficulty.
 - Feature packages record `risk_level`, component scores, `risk_score`, `hard_triggers`, and `classification_reason`.
+- Project workbench includes `workbench/scorecard/RUBRIC.md`, `SCORECARD.md`, and `CALIBRATION.md` to make evidence maturity, confidence, hard blockers, architecture review, semantic review, and score calibration visible.
 - Single-feature failure evidence is recorded in the feature package, while repeated or cross-feature AI failures are summarized in `workbench/feedback/FAILURE_LOG.md`.
 - `workbench/feature-template/` contains SPEC, CLARIFY, PLAN, TASKS, DECISIONS, CHECKLIST, VERIFY, and REVIEW templates.
 - `workbench.py feature --project <repo> --name <feature>` can create `workbench/features/<feature>/` from the templates.
@@ -93,6 +94,10 @@ Required:
 - The quality gate blocks feature packages with missing risk classification evidence or risk scores that are inconsistent with the selected `risk_level`.
 - `.workbench-validation/quality-gate-ok.json` written only after success.
 - Wrappers for Windows and POSIX that only call the Python engine.
+- Quality gate invokes `workbench/scorecard/scorecard.py --called-from-quality-gate --enforce-blockers` after deterministic checks pass and writes `.workbench-validation/scorecard-report.json`.
+- Scorecard reports `decision`, `confidence`, calibration status, and component floor violations so total score cannot hide local weaknesses.
+- Reference scores and component floors are audit signals; tests, quality-gate checks, hard blockers, CI, and human/independent review remain the actual gates.
+- `full` profile requires calibrated scoring evidence and completed semantic/architecture review or explicit accepted risk.
 
 Risk: local-only gates can still be skipped unless paired with hooks or CI.
 
@@ -131,6 +136,7 @@ The workbench improves from real usage instead of staying as static rules.
 Required:
 
 - Repeated failures are classified as requirement, implementation, test, review, tool, or rule gaps.
+- Scorecard false positives, false negatives, and suspicious high-score/low-quality cases are recorded and used to adjust templates, reference lines, gates, CI, hooks, or review rules.
 - Repeated failures have source feature-package evidence and a summary in `workbench/feedback/FAILURE_LOG.md`.
 - Workbench package self-upgrades have maintainer evidence in the plugin repository, not only in chat history or generated reports.
 - Plugin maintainer evidence lives under `docs/maintenance/IMPROVEMENT_LOG.md`, `docs/maintenance/FAILURE_PATTERNS.md`, and `docs/maintenance/adr/`.
@@ -168,4 +174,5 @@ Risk: measurement can become ceremony if it does not lead to changed checks or c
 - Upgrade overwrites existing project-specific docs by default.
 - The final answer claims validation without running `validate`, `audit`, or the generated quality gate.
 - Feedback notes accumulate but never become automated checks, clearer rules, or review criteria.
+- Scorecard becomes a vanity metric: high totals are used to bypass unresolved blockers, low confidence, missing calibration, component floor violations, missing semantic review, or architecture risk.
 - Workbench self-upgrade evidence exists only in `.workbench-validation/` or chat transcripts, so release decisions are not versioned with the plugin.

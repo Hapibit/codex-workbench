@@ -22,7 +22,7 @@
 使用规则：
 
 - 本文件是项目级事实源，不是一次性需求聊天记录。
-- 新需求改变用户、范围、权限、数据、AI 边界或验收时，先更新本文件，再更新 `PRODUCT_BASELINE.md`、`DEVELOPMENT_FLOW.md` 和相关功能包。
+- 新需求改变用户、范围、权限、数据、AI 边界或验收时，先更新本文件，再更新产品、UX、架构、交付和相关功能包。
 - 不能从聊天记录直接进入实现；影响交付的结论必须在本文件找到出处。
 - 不确定但可以先做的内容写入“可默认假设”；会改变实现路线或验收的内容写入“阻塞问题”。
 
@@ -166,6 +166,11 @@ intake_updated_at: unconfirmed
 
 ## 生成下游文件前检查
 
+- [ ] `workbench/product/PRODUCT_BRIEF.md` 已根据本文件更新。
+- [ ] `workbench/product/PRD.md` 已根据本文件更新。
+- [ ] `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` 已根据本文件更新，或确认本项目当前无 UI。
+- [ ] `workbench/architecture/ARCHITECTURE.md`、`DATA_MODEL.md`、`API_DESIGN.md`、`AI_DESIGN.md` 已根据本文件更新，或确认暂不涉及。
+- [ ] `workbench/delivery/ITERATION_PLAN.md` 和 `TASK_BREAKDOWN.md` 已根据本文件更新。
 - [ ] `PRODUCT_BASELINE.md` 已根据本文件更新。
 - [ ] `DEVELOPMENT_FLOW.md` 的范围和确认条件已根据本文件更新。
 - [ ] 第一个 `workbench/features/<feature-name>/SPEC.md` 已继承本文件里的第一版范围。

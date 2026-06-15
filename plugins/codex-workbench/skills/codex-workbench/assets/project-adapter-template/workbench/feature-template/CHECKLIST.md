@@ -11,9 +11,9 @@ delivery_allowed: false
 
 - `feature_status: active`：当前功能正在推进，质量门会检查阶段状态。
 - `feature_status: on_hold`：暂存或暂停的功能包，质量门只检查文件结构，不要求交付完成。
-- `feature_status: complete`：功能包准备交付，必须满足 SPEC/CLARIFY/PLAN/TASKS/VERIFY/REVIEW 状态要求。
-- `current_stage` 只能是 `spec`、`clarify`、`plan`、`tasks`、`implement`、`verify`、`review`、`complete`。
-- 阶段不能倒挂：进入 `plan` 前 SPEC 和 CLARIFY 必须可计划；进入 `tasks` 前 PLAN 必须可拆解；进入 `implement` 前 PLAN/TASKS 必须允许实现；进入 `review` 前 VERIFY 必须通过；进入 `complete` 前 REVIEW 必须通过。
+- `feature_status: complete`：功能包准备交付，必须满足 SPEC/CLARIFY/DESIGN/PLAN/TASKS/VERIFY/REVIEW 状态要求。
+- `current_stage` 只能是 `spec`、`clarify`、`design`、`plan`、`tasks`、`implement`、`verify`、`review`、`complete`。
+- 阶段不能倒挂：进入 `plan` 前 SPEC、CLARIFY 和 DESIGN 必须可计划；进入 `tasks` 前 PLAN 必须可拆解；进入 `implement` 前 PLAN/TASKS 必须允许实现；进入 `review` 前 VERIFY 必须通过；进入 `complete` 前 REVIEW 必须通过。
 
 ## 分级门禁
 
@@ -38,6 +38,13 @@ delivery_allowed: false
 - [ ] `CLARIFY.md` 没有未解决的阻塞问题。
 - [ ] 默认假设都有依据和后续确认方式。
 - [ ] 用户、代码、README、测试或 CI 能证明的事实已记录。
+
+## DESIGN 门禁
+
+- [ ] `DESIGN.md` 已说明 UX、页面、状态或确认本功能无 UI。
+- [ ] `DESIGN.md` 已说明架构、数据、API、权限、AI 影响或确认不涉及。
+- [ ] 设计与 PRD、UX、架构文档不冲突。
+- [ ] 高风险设计已有人工确认或 ADR。
 
 ## PLAN 门禁
 

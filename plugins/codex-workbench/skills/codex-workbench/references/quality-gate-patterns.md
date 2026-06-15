@@ -30,6 +30,13 @@ workbench/
     runtime-gate.sh
   review/
     independent-review-prompt.md
+  scorecard/
+    scorecard.py
+    scorecard.ps1
+    scorecard.sh
+    RUBRIC.md
+    SCORECARD.md
+    CALIBRATION.md
 ```
 
 ## `quality_gate.py`
@@ -43,6 +50,9 @@ Required behavior:
 - Stop on first failure.
 - Check `PROJECT_INTAKE.md` for draft status and open project-intake blockers before success.
 - Check existing `workbench/features/<feature-name>/` packages for required SDD files and unresolved blocking clarifications.
+- Invoke `workbench/scorecard/scorecard.py --profile <profile> --write-report --called-from-quality-gate --enforce-blockers` after deterministic project checks pass and before writing the success marker.
+- Treat scorecard hard blockers and `full` profile calibration or semantic-review blockers as quality-gate failures.
+- Treat reference score, component floor violations, low confidence, and incomplete semantic/architecture review as risk evidence unless the current profile explicitly promotes them to hard blockers.
 - Create `.workbench-validation/`.
 - Write `.workbench-validation/quality-gate-ok.json` only after all checks pass.
 - Include timestamp, project root, selected profile, and checks run in the marker JSON.
@@ -84,6 +94,9 @@ Common checks by stack:
 - quality gate has non-empty checks for useful profiles;
 - generation report exists;
 - project intake is present, has valid status, and does not contradict a confirmed development flow;
+- scorecard files are present and the quality gate invokes `scorecard.py` with `--called-from-quality-gate`;
+- scorecard script outputs `decision`, confidence, calibration status, and component floor violations;
+- `CALIBRATION.md` exists and has fields for anchor examples, human spot checks, false positives, false negatives, and reference-line changes;
 - local pre-commit/hook framework and CI signals are present or explicitly absent.
 
 Treat `P0` and `P1` audit findings as blockers before sharing the adapter.

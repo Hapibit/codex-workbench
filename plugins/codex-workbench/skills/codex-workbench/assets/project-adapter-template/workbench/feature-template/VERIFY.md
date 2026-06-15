@@ -16,6 +16,7 @@ verified_at: unconfirmed
 ## 验证范围
 
 - 对应 SPEC 验收项：
+- 对应 DESIGN 设计项：
 - 本次覆盖：
 - 本次不覆盖：
 
@@ -82,6 +83,7 @@ AI 做错、验证失败或返工时必须填写：
 - 修复后必须重新运行能复现失败的命令或场景。
 - 如果不能复现，说明原因，并把残留风险写入“剩余风险”。
 - 同类失败重复出现时，把摘要同步到 `workbench/feedback/FAILURE_LOG.md`。
+- 修改后 AI 工作效果要同步到 `workbench/feedback/AI_EFFECTIVENESS.md` 或本功能 `CHANGELOG.md`。
 
 ## 剩余风险
 

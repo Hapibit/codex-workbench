@@ -8,6 +8,24 @@
 
 - `AGENTS.md`：项目规则入口，说明 AI 必读内容、完成标准、澄清条件和硬边界。
 - `PROJECT_INTAKE.md`：项目预处理画像，用来把模糊需求转成可确认的目标、用户、范围、数据、权限、AI 边界和验收。
+- `workbench/product/PRODUCT_BRIEF.md`：产品简报，定义业务目标、成功指标、第一版价值和范围边界。
+- `workbench/product/PRD.md`：产品需求，定义用户故事、验收标准、非目标和需求变更规则。
+- `workbench/product/ROADMAP.md`：路线图，定义版本范围、优先级、依赖和迭代节奏。
+- `workbench/design/UX_SPEC.md`：交互规格，定义页面、流程、状态、错误反馈和可用性要求。
+- `workbench/design/PROTOTYPE.md`：原型说明，记录 Figma、图片、HTML 或其他原型位置和验收。
+- `workbench/design/USER_FLOW.md`：用户流程，记录入口、成功路径、失败路径和验证方式。
+- `workbench/architecture/ARCHITECTURE.md`：架构设计，定义模块、边界、数据流、风险和约束。
+- `workbench/architecture/DATA_MODEL.md`：数据模型，定义实体、关系、权限和迁移规则。
+- `workbench/architecture/API_DESIGN.md`：API 设计，定义接口契约、错误、权限和兼容性。
+- `workbench/architecture/AI_DESIGN.md`：AI 设计，定义 AI 输入输出、工具、数据来源、人工确认和 eval。
+- `workbench/architecture/adr/`：ADR 目录，记录重大架构、数据、API、AI、部署和安全决策。
+- `workbench/delivery/RELEASE_PLAN.md`：发布计划，记录版本范围、验证和回滚。
+- `workbench/delivery/ITERATION_PLAN.md`：迭代计划，记录当前迭代、变更、复测和下一轮动作。
+- `workbench/delivery/TASK_BREAKDOWN.md`：任务拆分，承接 PRD/UX/架构，进一步落到功能工作包。
+- `workbench/scorecard/RUBRIC.md`：证据审计规则，定义权重、参考线、硬阻塞和语义复核边界。
+- `workbench/scorecard/SCORECARD.md`：项目当前证据审计卡，记录决策、参考分、可信度、架构合理性、语义质量复核和改进动作。
+- `workbench/scorecard/CALIBRATION.md`：审计口径校准记录，记录锚定样例、人工抽查、误报、漏报和参考线调整依据。
+- `workbench/scorecard/scorecard.py`：跨平台证据审计脚本，检查证据成熟度和状态一致性。
 - `WORKBENCH.md`：工作台使用说明，说明怎么运行质量门、运行时检查、审计和分享。
 - `REVIEW.md`：项目审查标准，要求审查先报风险、再报建议。
 - `DEVELOPMENT_FLOW.md`：项目开发流程契约。默认是 `status: draft`，必须由项目负责人确认后才作为功能开发流程。
@@ -19,9 +37,87 @@
 - `workbench/runtime/runtime_gate.py`：运行时 smoke 计划和可选 URL 检查。
 - `workbench/runtime/api_smoke.py`：轻量 API 可用性检查。
 - `workbench/feedback/FAILURE_LOG.md`：AI 失败、返工、审查漏报、质量门缺口和工作台改进证据。
+- `workbench/feedback/ITERATION_LOG.md`：需求变化、用户反馈、审查结论和验证结果的迭代记录。
+- `workbench/feedback/AI_EFFECTIVENESS.md`：AI 实现、审查、修改后的效果评估。
 - `workbench/review/independent-review-prompt.md`：给新 AI 会话使用的只读独立审查提示。
 - `workbench/feature-template/`：功能工作包模板，用于复制到 `workbench/features/<feature-name>/`。
 - `workbench/features/<feature-name>/`：真实功能工作包目录，每个重要功能一份。
+
+## 标准开发流程
+
+本工作台的完整 0 到 1 流程是：
+
+```text
+项目发现 -> 产品简报 -> PRD -> UX/原型 -> 架构设计 -> 交付计划 -> 功能包开发 -> 验证审查 -> 迭代复盘
+```
+
+对应文件：
+
+| 阶段 | 目标 | 主要产物 |
+| --- | --- | --- |
+| 项目发现 | 搞清楚项目是什么、给谁用、第一版做什么 | `PROJECT_INTAKE.md` |
+| 产品简报 | 明确业务目标、成功指标、范围边界 | `workbench/product/PRODUCT_BRIEF.md` |
+| PRD | 明确产品需求、用户故事、验收标准、非目标 | `workbench/product/PRD.md` |
+| UX/原型 | 明确用户流程、页面状态、原型和交互 | `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` |
+| 架构设计 | 明确模块、数据、API、AI、ADR 和风险 | `workbench/architecture/` |
+| 交付计划 | 明确版本、迭代和任务拆分 | `workbench/delivery/` |
+| 功能包开发 | 单功能 SPEC、CLARIFY、DESIGN、PLAN、TASKS、实现 | `workbench/features/<feature-name>/` |
+| 验证审查 | 测试、质量门、独立审查、剩余风险 | `VERIFY.md`、`REVIEW.md`、质量门 |
+| 证据审计 | 证据成熟度、硬阻塞、架构/语义复核 | `workbench/scorecard/` |
+| 迭代复盘 | 需求变化、AI 效果、失败模式、自动化改进 | `workbench/feedback/` |
+
+这不是一次性瀑布流程。小改动可以走轻流程；新项目、核心功能、跨模块、高风险或需求不清时，必须先补前置事实源，再让 AI 实现。
+
+## AI 实现后的闭环
+
+AI 可以先写代码，但不能自己宣布质量合格。每次 AI 实现后按以下闭环处理：
+
+1. 对照 `SPEC.md` 和 `DESIGN.md` 检查有没有偏离需求、UX、架构或权限边界。
+2. 运行 `VERIFY.md` 里定义的验证和项目质量门。
+3. 用 `REVIEW.md` 做功能审查；高风险改动再开独立审查。
+4. 发现问题时先判断问题属于 PRD、UX、架构、计划、实现、测试还是审查缺口。
+5. 根据归因回到对应文件修改，不要只在代码里补丁式修。
+6. 修改后重新验证和审查，并把复测写入 `CHANGELOG.md`、`VERIFY.md` 或 `ITERATION_LOG.md`。
+7. 统计 AI 的返工、审查发现和质量门失败，写入 `AI_EFFECTIVENESS.md`，用于升级模板、测试、质量门或 CI。
+
+## 证据审计
+
+运行：
+
+```bash
+python workbench/scorecard/scorecard.py --profile standard --write-report
+```
+
+审计报告写入：
+
+```text
+.workbench-validation/scorecard-report.json
+```
+
+审计规则在 `workbench/scorecard/RUBRIC.md`。默认参考线：
+
+- `smoke`：60 分参考线，组件下限 20%，快速判断证据是否足以继续推进。
+- `standard`：75 分参考线，组件下限 50%，日常开发默认审计档。
+- `full`：85 分参考线，组件下限 60%，发布、PR、跨模块或高风险改动；必须完成校准和语义/架构复核。
+
+审计顺序：
+
+1. 先看硬阻塞；有硬阻塞时总分无效。
+2. 再看 `decision`：`BLOCKED` 阻塞，`PASS_WITH_RISK` 需要人工确认风险，`PASS` 才能作为流程证据。
+3. 再看总分是否低于当前档位参考线；低分不自动失败，但说明证据不足。
+4. 再看组件下限，防止总分掩盖产品、架构、验证等单项短板。
+5. 再看 `score_confidence`、`CALIBRATION.md`、`semantic_review_status` 和 `architecture_review_status`。
+6. 如果语义或架构复核仍是 `pending`，可以继续开发，但不能宣称业务、产品、UX 或架构已经通过最终验收。
+
+这个分数只代表证据成熟度和流程一致性。产品目标是否正确、架构是否真的合理、AI eval 是否覆盖真实失败样例，仍需要人工或独立 AI 审查写入 `SCORECARD.md`。
+
+`score_confidence` 比总分更重要：
+
+- `high`：没有硬阻塞、组件下限缺口、校准缺口或语义/架构复核缺口。
+- `medium`：分数可参考，但需要人工看校准、复核或警告项。
+- `low`：分数不能作为通过依据，只能作为问题定位线索。
+
+如果分数和实际质量不一致，把差异写入 `CALIBRATION.md` 的误报/漏报记录，然后调整模板、脚本、质量门、CI、hook 或审查清单。不要为了刷高分而补空文档。
 
 ## 质量门
 
@@ -40,6 +136,8 @@ python workbench/quality/quality_gate.py --profile standard
 {{QUALITY_COMMANDS}}
 
 如果没有任何检查，质量门会失败，除非显式传入 `--allow-empty`。对代码项目来说，空质量门不能当作真实验证。
+
+质量门先运行确定性检查，再调用 `workbench/scorecard/scorecard.py --called-from-quality-gate --enforce-blockers` 生成证据审计报告。只有硬阻塞会让质量门失败；参考分、组件下限、低可信度和未完成复核必须作为风险说明，不能伪装成质量通过证明。
 
 ## 开发流程契约
 
@@ -129,6 +227,8 @@ Use Codex Workbench to audit this project workbench.
 `development-flow-draft` 通常是 `P2`：它不阻止生成工作台，但表示项目流程还没有人工确认，不应该直接用于高风险功能开发。
 
 `project-intake-draft` 和 `open-project-intake-blocker` 通常是 `P2`：它们表示项目信息还没完成预处理。生成工作台可以通过，但后续项目质量门会在 `PROJECT_INTAKE.md` 仍是 draft 或存在 open 阻塞问题时失败。
+
+`scorecard-report-not-generated` 是 `P1`：表示质量门没有生成证据审计报告，硬阻塞和证据缺口可能被跳过，必须修复。
 
 ## 运行时检查
 

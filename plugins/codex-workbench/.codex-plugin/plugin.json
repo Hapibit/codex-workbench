@@ -1,6 +1,6 @@
 {
   "name": "codex-workbench",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A low-friction Codex workbench package with one visible skill entrypoint for project intake, workbench generation, feature workflows, quality gates, and review rules.",
   "author": {
     "name": "Hapibit"
