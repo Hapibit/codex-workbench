@@ -18,6 +18,7 @@
 升级规则：
 
 - 第一次出现：优先在对应功能包 `VERIFY.md`、`REVIEW.md`、`DECISIONS.md` 记录。
+- 每次功能审查结束前，必须在功能 `REVIEW.md` 的 `workbench_upgrade_assessment` 写明是否需要升级工作台；不能只在最终回复里口头说明。
 - 同类问题第二次出现：写入本文件，并判断是否需要改模板、审查清单或质量门。
 - 同类问题第三次出现，或一次就造成 P0/P1：必须优先考虑脚本、测试、CI、hook 或质量门，不再只加 Markdown 规则。
 - 如果暂时不能自动化，必须说明原因和人工复查位置。
@@ -52,6 +53,7 @@ workbench/features/<feature-name>/DECISIONS.md
 - 已修复位置：
 - 复现方式：
 - 防复发证据：
+- 对应功能 `REVIEW.md` 的 `workbench_upgrade_assessment`：
 - 应沉淀为：
   - [ ] 需求澄清问题
   - [ ] SPEC/PLAN/TASKS 模板

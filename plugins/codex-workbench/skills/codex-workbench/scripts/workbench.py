@@ -154,6 +154,7 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "证据审计",
         "FAILURE_LOG.md",
         "反馈闭环",
+        "workbench_upgrade_assessment",
     ],
     "REVIEW.md": [
         "严重级别",
@@ -358,12 +359,14 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "status",
         "验证命令",
         "验收记录",
+        "workbench_upgrade_assessment",
     ],
     "workbench/feature-template/REVIEW.md": [
         "status",
         "审查结果",
         "P0",
         "P1",
+        "workbench_upgrade_assessment",
     ],
     "workbench/feature-template/CHANGELOG.md": [
         "变更记录",
@@ -374,6 +377,7 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
     "workbench/feedback/FAILURE_LOG.md": [
         "证据归档位置",
         "workbench/features/<feature-name>/VERIFY.md",
+        "workbench_upgrade_assessment",
         "自动化状态",
         "质量门",
     ],
@@ -410,6 +414,10 @@ IMPLEMENTATION_LEAK_PATTERNS = [
 ]
 
 REPORT_DIR = ".workbench-validation"
+ARCHIVE_DIR = "workbench/archive"
+DEFAULT_RETENTION_KEEP_REPORTS = 5
+MAINTENANCE_LOG_WARN_BYTES = 96 * 1024
+MAINTENANCE_LOG_ARCHIVE_BYTES = 160 * 1024
 
 PROCESS_STATUSES = {"draft", "confirmed"}
 INTAKE_STATUSES = {"draft", "confirmed"}
@@ -424,6 +432,15 @@ PLAN_STATUSES = {"draft", "approved", "blocked"}
 TASKS_STATUSES = {"draft", "ready", "blocked"}
 VERIFY_STATUSES = {"missing", "partial", "passed", "failed", "blocked"}
 REVIEW_STATUSES = {"pending", "passed", "failed", "blocked"}
+WORKBENCH_UPGRADE_ASSESSMENTS = {
+    "not_required",
+    "failure_log_updated",
+    "template_update_needed",
+    "quality_gate_update_needed",
+    "review_rule_update_needed",
+    "ci_or_hook_needed",
+    "deferred_with_reason",
+}
 RECIPIENT_SETUP_ITEMS = [
     "Codex installation and login",
     "Recipient-owned Codex config",
@@ -1185,6 +1202,21 @@ def check_feature_packages(root: Path) -> list[str]:
         tasks_status = require_feature_status(package, "TASKS.md", {{"draft", "ready", "blocked"}})
         verify_status = require_feature_status(package, "VERIFY.md", {{"missing", "partial", "passed", "failed", "blocked"}})
         review_status = require_feature_status(package, "REVIEW.md", {{"pending", "passed", "failed", "blocked"}})
+        review_text = read_text(package / "REVIEW.md")
+        workbench_upgrade_assessment = (read_field(review_text, "workbench_upgrade_assessment") or "unassessed").lower()
+        accepted_upgrade_assessments = {{
+            "not_required",
+            "failure_log_updated",
+            "template_update_needed",
+            "quality_gate_update_needed",
+            "review_rule_update_needed",
+            "ci_or_hook_needed",
+            "deferred_with_reason",
+        }}
+        if workbench_upgrade_assessment == "unassessed" and (verify_status in {{"failed", "blocked"}} or review_status in {{"failed", "blocked"}} or current_stage == "complete" or feature_status == "complete"):
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} must set REVIEW.md workbench_upgrade_assessment before passing quality gate")
+        if workbench_upgrade_assessment != "unassessed" and workbench_upgrade_assessment not in accepted_upgrade_assessments:
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid workbench_upgrade_assessment: {{workbench_upgrade_assessment}}")
         risk_level = (read_field(spec_text, "risk_level") or "unclassified").lower()
         impact_score = read_int(spec_text, "impact_score")
         uncertainty_score = read_int(spec_text, "uncertainty_score")
@@ -2318,6 +2350,174 @@ def validate_adapter(project: Path) -> dict[str, Any]:
     return report
 
 
+def file_size(path: Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
+def retention_action(action: str, rel: str, reason: str, target: str | None = None, size: int | None = None) -> dict[str, Any]:
+    item: dict[str, Any] = {"action": action, "path": rel, "reason": reason}
+    if target:
+        item["target"] = target
+    if size is not None:
+        item["sizeBytes"] = size
+    return item
+
+
+def archive_target_for_report(project: Path, report: Path) -> Path:
+    try:
+        stamp = datetime.fromtimestamp(report.stat().st_mtime, timezone.utc)
+    except OSError:
+        stamp = datetime.now(timezone.utc)
+    return project / ARCHIVE_DIR / "validation" / stamp.strftime("%Y-%m") / report.name
+
+
+def unique_archive_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+    stem = path.stem
+    suffix = path.suffix
+    parent = path.parent
+    index = 2
+    while True:
+        candidate = parent / f"{stem}-{index}{suffix}"
+        if not candidate.exists():
+            return candidate
+        index += 1
+
+
+def project_feature_packages(project: Path) -> list[Path]:
+    feature_dir = project / "workbench" / "features"
+    if not feature_dir.exists():
+        return []
+    return sorted(item for item in feature_dir.iterdir() if item.is_dir())
+
+
+def build_retention_plan(project: Path, keep_reports: int = DEFAULT_RETENTION_KEEP_REPORTS) -> dict[str, Any]:
+    actions: list[dict[str, Any]] = []
+    report_dir = project / REPORT_DIR
+    if report_dir.exists():
+        reports = sorted(
+            (item for item in report_dir.iterdir() if item.is_file()),
+            key=lambda item: item.stat().st_mtime if item.exists() else 0,
+            reverse=True,
+        )
+        for index, report in enumerate(reports):
+            rel = rel_to(project, report)
+            if index < keep_reports:
+                actions.append(retention_action("keep-latest-report", rel, f"Keep the newest {keep_reports} machine-generated validation reports.", size=file_size(report)))
+                continue
+            target = unique_archive_path(archive_target_for_report(project, report))
+            actions.append(
+                retention_action(
+                    "archive-report",
+                    rel,
+                    "Machine-generated reports should not accumulate in .workbench-validation; archive older reports instead of deleting evidence.",
+                    rel_to(project, target),
+                    file_size(report),
+                )
+            )
+    else:
+        actions.append(retention_action("no-op", REPORT_DIR, "No generated validation report directory exists."))
+
+    maintenance_files = [
+        project / "docs" / "maintenance" / "IMPROVEMENT_LOG.md",
+        project / "docs" / "maintenance" / "FAILURE_PATTERNS.md",
+        project / "workbench" / "feedback" / "FAILURE_LOG.md",
+        project / "workbench" / "feedback" / "ITERATION_LOG.md",
+        project / "workbench" / "feedback" / "AI_EFFECTIVENESS.md",
+    ]
+    for path in maintenance_files:
+        if not path.exists():
+            continue
+        size = file_size(path)
+        rel = rel_to(project, path)
+        if size >= MAINTENANCE_LOG_ARCHIVE_BYTES:
+            actions.append(
+                retention_action(
+                    "recommend-manual-archive",
+                    rel,
+                    "Long-lived human evidence is too large. Keep an index/current section here and move older versioned records to an archive file or ADR after review.",
+                    size=size,
+                )
+            )
+        elif size >= MAINTENANCE_LOG_WARN_BYTES:
+            actions.append(
+                retention_action(
+                    "warn-growing-log",
+                    rel,
+                    "Human-maintained evidence is growing. Review whether old entries should become an archive file, ADR, or failure-pattern summary.",
+                    size=size,
+                )
+            )
+        else:
+            actions.append(retention_action("keep-human-evidence", rel, "Human-maintained evidence is within the current size budget.", size=size))
+
+    for package in project_feature_packages(project):
+        state = feature_package_state(package) if all((package / filename).exists() for filename in FEATURE_PACKAGE_FILES) else {}
+        rel = rel_to(project, package)
+        if state.get("featureStatus") == "complete":
+            actions.append(
+                retention_action(
+                    "recommend-feature-archive",
+                    rel,
+                    "Completed feature evidence may be moved to workbench/archive/features only after release notes and downstream references are updated.",
+                )
+            )
+        elif state:
+            actions.append(retention_action("keep-active-feature", rel, "Active or on-hold feature evidence stays in workbench/features."))
+
+    return {
+        "schema": "codex-workbench-retention/v1",
+        "timestamp": utc_now(),
+        "projectRoot": str(project),
+        "mode": "preview",
+        "policy": {
+            "keepLatestValidationReports": keep_reports,
+            "machineReports": ".workbench-validation keeps only current generated reports; older reports are archived, not deleted.",
+            "humanEvidence": "Maintenance logs, failure logs, and ADRs are reviewed and split manually; the retention command does not rewrite them.",
+            "featureEvidence": "Feature packages remain the source evidence. Completed packages can be archived only after references and release notes are updated.",
+        },
+        "actions": actions,
+    }
+
+
+def apply_retention_plan(project: Path, report: dict[str, Any]) -> dict[str, Any]:
+    applied: list[dict[str, Any]] = []
+    for action in report["actions"]:
+        if action["action"] != "archive-report":
+            applied.append({**action, "status": "skipped"})
+            continue
+        source = project / action["path"]
+        target = project / action["target"]
+        if not source.exists():
+            applied.append({**action, "status": "missing-source"})
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        final_target = unique_archive_path(target)
+        shutil.move(str(source), str(final_target))
+        applied.append({**action, "target": rel_to(project, final_target), "status": "archived"})
+    report = {**report, "mode": "applied", "applied": applied}
+    return report
+
+
+def retention_report(project: Path, keep_reports: int = DEFAULT_RETENTION_KEEP_REPORTS, apply: bool = False, write_report: bool = False) -> dict[str, Any]:
+    if keep_reports < 1:
+        raise SystemExit("--keep-reports must be at least 1.")
+    report = build_retention_plan(project, keep_reports)
+    if apply:
+        report = apply_retention_plan(project, report)
+    if write_report:
+        report_dir = project / REPORT_DIR
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_path = report_dir / "retention-report.json"
+        report["reportPath"] = str(report_path)
+        report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return report
+
+
 def issue(severity: str, code: str, message: str, path: str | None = None) -> dict[str, str]:
     item = {"severity": severity, "code": code, "message": message}
     if path:
@@ -2384,6 +2584,7 @@ def feature_package_state(package: Path) -> dict[str, Any]:
         "tasksReadyForImplementation": frontmatter_bool(texts.get("TASKS.md", ""), "ready_for_implementation"),
         "verifyStatus": (frontmatter_field(texts.get("VERIFY.md", ""), "status") or "missing").lower(),
         "reviewStatus": (frontmatter_field(texts.get("REVIEW.md", ""), "status") or "pending").lower(),
+        "workbenchUpgradeAssessment": (frontmatter_field(texts.get("REVIEW.md", ""), "workbench_upgrade_assessment") or "unassessed").lower(),
         "hasOpenClarification": bool(re.search(r"(?im)^\|\s*C\d+\s*\|.*\|\s*open\s*\|\s*$", texts.get("CLARIFY.md", ""))),
         "verifyEmpty": "|  |  |  |" in texts.get("VERIFY.md", "") and "- [ ] 可以交付。" in texts.get("VERIFY.md", ""),
         "hasUncheckedChecklist": bool(re.search(r"(?m)^- \[ \]", checklist)),
@@ -2450,6 +2651,10 @@ def feature_state_errors(state: dict[str, Any]) -> list[str]:
         errors.append(f"invalid VERIFY.md status '{state['verifyStatus']}'")
     if state["reviewStatus"] not in REVIEW_STATUSES:
         errors.append(f"invalid REVIEW.md status '{state['reviewStatus']}'")
+    if state["workbenchUpgradeAssessment"] == "unassessed" and (state["featureStatus"] == "complete" or state["currentStage"] == "complete" or state["verifyStatus"] in {"failed", "blocked"} or state["reviewStatus"] in {"failed", "blocked"}):
+        errors.append("workbench_upgrade_assessment is unassessed after failure, blocked review, or completed feature")
+    if state["workbenchUpgradeAssessment"] != "unassessed" and state["workbenchUpgradeAssessment"] not in WORKBENCH_UPGRADE_ASSESSMENTS:
+        errors.append(f"invalid workbench_upgrade_assessment '{state['workbenchUpgradeAssessment']}'")
     if feature_stage_reached(state, "plan") and (state["specStatus"] != "approved" or not state["specApprovedForPlan"]):
         errors.append("current_stage reached plan before SPEC.md was approved_for_plan")
     if feature_stage_reached(state, "plan") and (state["clarifyStatus"] not in {"ready", "deferred"} or not state["clarifyReadyForPlan"]):
@@ -3272,6 +3477,13 @@ def main(argv: list[str] | None = None) -> int:
     p_audit.add_argument("--project", default=None)
     p_audit.add_argument("--output", default=None)
 
+    p_retention = sub.add_parser("retention")
+    p_retention.add_argument("--project", default=None)
+    p_retention.add_argument("--keep-reports", type=int, default=DEFAULT_RETENTION_KEEP_REPORTS)
+    p_retention.add_argument("--apply", action="store_true", help="Archive older machine-generated reports. Human evidence is never rewritten.")
+    p_retention.add_argument("--write-report", action="store_true")
+    p_retention.add_argument("--output", default=None)
+
     p_self = sub.add_parser("self-test")
     p_self.add_argument("--output", default=None)
 
@@ -3330,6 +3542,11 @@ def main(argv: list[str] | None = None) -> int:
         report = audit_adapter(project)
         write_json(report, args.output)
         return 0 if report["passed"] else 1
+    if args.command == "retention":
+        project = resolve_project(args.project)
+        report = retention_report(project, args.keep_reports, args.apply, args.write_report)
+        write_json(report, args.output)
+        return 0
     if args.command == "self-test":
         report = run_self_test()
         write_json(report, args.output)

@@ -3,6 +3,7 @@
 status: pending
 reviewed_by: unconfirmed
 reviewed_at: unconfirmed
+workbench_upgrade_assessment: unassessed
 
 ## 审查依据
 
@@ -79,9 +80,24 @@ P1 path/to/file.ext:123 - 问题标题
 
 - 
 
+## 工作台升级判断
+
+`workbench_upgrade_assessment` 必须在审查结束前改成以下之一，不能保持 `unassessed`：
+
+| 值 | 使用场景 | 必填证据 |
+| --- | --- | --- |
+| `not_required` | 一次性问题，已经在当前功能修复并验证，不需要升级工作台机制。 | 写明原因和验证位置。 |
+| `failure_log_updated` | 同类问题重复出现，或需要后续归纳。 | 写明 `workbench/feedback/FAILURE_LOG.md` 条目。 |
+| `template_update_needed` | 模板缺字段、缺检查项或容易让 AI 漏掉信息。 | 写明要改的模板。 |
+| `quality_gate_update_needed` | 问题可由脚本、scorecard 或质量门稳定发现。 | 写明建议检查规则。 |
+| `review_rule_update_needed` | review 漏掉风险或 P0/P1 定义不清。 | 写明要改的审查规则。 |
+| `ci_or_hook_needed` | 需要 CI、pre-commit、hook 或其他硬门禁防止绕过。 | 写明建议门禁位置。 |
+| `deferred_with_reason` | 暂不升级。 | 写明原因、风险和后续复查点。 |
+
 ## 复查结论
 
 - 是否允许交付：
 - 阻塞项：
 - 未验证风险：
 - 需要写入 `FAILURE_LOG.md` 的重复问题：
+- 工作台升级判断：

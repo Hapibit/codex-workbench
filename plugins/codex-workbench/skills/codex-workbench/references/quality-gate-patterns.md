@@ -50,12 +50,15 @@ Required behavior:
 - Stop on first failure.
 - Check `PROJECT_INTAKE.md` for draft status and open project-intake blockers before success.
 - Check existing `workbench/features/<feature-name>/` packages for required SDD files and unresolved blocking clarifications.
+- Block completed, failed, blocked, or repeated-issue feature packages whose `REVIEW.md` still has `workbench_upgrade_assessment: unassessed`.
+- Reject unknown `workbench_upgrade_assessment` values so upgrade decisions use the controlled vocabulary in the feature template.
 - Invoke `workbench/scorecard/scorecard.py --profile <profile> --write-report --called-from-quality-gate --enforce-blockers` after deterministic project checks pass and before writing the success marker.
 - Treat scorecard hard blockers and `full` profile calibration or semantic-review blockers as quality-gate failures.
 - Treat reference score, component floor violations, low confidence, and incomplete semantic/architecture review as risk evidence unless the current profile explicitly promotes them to hard blockers.
 - Create `.workbench-validation/`.
 - Write `.workbench-validation/quality-gate-ok.json` only after all checks pass.
 - Include timestamp, project root, selected profile, and checks run in the marker JSON.
+- Treat `.workbench-validation/` as generated current-state evidence, not a long-term human-maintained log. Long-term decisions and repeated failure patterns belong in feedback logs, maintenance docs, or ADRs.
 - Print each command before running it.
 - Return non-zero on failed checks, missing configured commands, or an empty code-project gate.
 

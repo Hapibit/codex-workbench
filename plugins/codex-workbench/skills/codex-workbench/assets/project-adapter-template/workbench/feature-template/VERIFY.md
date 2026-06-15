@@ -74,9 +74,9 @@ verified_at: unconfirmed
 
 AI 做错、验证失败或返工时必须填写：
 
-| 问题 | 失败命令/场景 | 复测结果 | 是否需要更新 REVIEW/DECISIONS/FAILURE_LOG |
+| 问题 | 失败命令/场景 | 复测结果 | 是否需要更新 REVIEW/DECISIONS/FAILURE_LOG | 工作台升级初判 |
 | --- | --- | --- | --- |
-|  |  |  |  |
+|  |  |  |  |  |
 
 复测要求：
 
@@ -84,6 +84,7 @@ AI 做错、验证失败或返工时必须填写：
 - 如果不能复现，说明原因，并把残留风险写入“剩余风险”。
 - 同类失败重复出现时，把摘要同步到 `workbench/feedback/FAILURE_LOG.md`。
 - 修改后 AI 工作效果要同步到 `workbench/feedback/AI_EFFECTIVENESS.md` 或本功能 `CHANGELOG.md`。
+- 出现 failed、blocked、返工或重复问题时，必须在 `REVIEW.md` 的 `workbench_upgrade_assessment` 写明最终升级判断。
 
 ## 剩余风险
 

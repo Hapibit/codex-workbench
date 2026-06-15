@@ -32,6 +32,92 @@
 
 ## 记录
 
+### 2026-06-15 - 增加证据保留策略，避免日志无限堆积
+
+问题：
+
+用户指出工作台日志如果一直堆积，会让文件越来越大、AI 读取成本变高、当前事实和历史证据混在一起；但如果简单删除，又会破坏工作台的证据链、复盘和发布审计。这个问题不能靠局部清理脚本解决，必须满足工作台“有证据、有门禁、有复盘、有迭代”的整体需求。
+
+证据来源：
+
+- 用户反馈：要求先搜索资料，再优化，并强调不能胡乱局部优化导致整体架构崩坏。
+- 官方/外部资料：
+  - Cloudflare log retention best practices：日志保留是数据保留策略的一部分，要平衡安全、调试、合规和成本。
+  - Groundcover log retention policies：保留策略应自动执行，按诊断价值分层，低价值日志短保留，高价值事件可归档。
+  - ADR 官方资料与 AWS ADR process：重大长期决策应该形成 decision log，记录 context、decision、consequences，而不是塞进一个无限增长日志。
+  - Google SRE postmortem culture：复盘要有根因、影响、行动项和审查；没有审查和行动项的复盘不会形成学习。
+- 本地失败证据：
+  - `.workbench-validation/` 已明确是机器报告目录，但没有命令帮助用户把旧报告移出当前报告区。
+  - `IMPROVEMENT_LOG.md`、`FAILURE_LOG.md` 等长期证据已有定位，但没有明确“过大时如何归档、不自动删除”的执行边界。
+
+决策：
+
+新增 `workbench.py retention` 命令，默认只预览保留计划。它把证据分为机器报告、功能级证据、重复失败摘要和长期决策四类。`--apply` 只把旧机器报告从 `.workbench-validation/` 移动到 `workbench/archive/validation/YYYY-MM/`，不删除文件，不重写人工维护日志，不移动功能包。人工日志过大时只给出拆分、归档或 ADR 建议，由维护者审查后处理。
+
+变更文件：
+
+- `skills/codex-workbench/SKILL.md`
+- `skills/codex-workbench/scripts/workbench.py`
+- `skills/codex-workbench/assets/project-adapter-template/WORKBENCH.md`
+- `skills/codex-workbench/references/project-adapter-template.md`
+- `skills/codex-workbench/references/quality-gate-patterns.md`
+- `skills/codex-workbench/references/workbench-maturity.md`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+
+验证结果：
+
+- 待运行 `py -m py_compile`、`self-test`、`golden-test`、`doctor` 和 `package-check --expected-version 1.1.0 --write-report`。
+
+后续动作：
+
+- 真实项目试水时观察 `retention` 报告是否能把当前机器报告、长期人工证据和功能包证据分清。
+- 如果用户需要自动归档功能包，必须另行设计引用更新和 release note 检查，不能直接移动目录。
+
+### 2026-06-15 - 让功能审查显式判断是否需要升级工作台
+
+问题：
+
+用户担心 Codex 在写项目代码时只完成当前功能，却不会留意“这次失败、返工、审查漏报或重复问题是否说明工作台本身要升级”。如果只把这件事写在最终回复或普通说明里，模型很容易跳过，后续项目也不会从失败中受益。
+
+证据来源：
+
+- 用户反馈：明确询问“怎么保证 Codex 会留意升级这个东西”，并多次强调软约束会被跳过，必须尽量落到工具层或流程证据里。
+- 官方/外部资料：
+  - OpenAI Codex 官方资料把 `AGENTS.md`、skill/plugin、MCP、hook 等分为不同职责层：持久规则、可复用流程、工具能力和工具调用/生命周期拦截应分层使用。
+  - OpenAI Codex `AGENTS.md` 指南强调项目规则和验证命令应放入仓库可读文件，而不是只依赖对话记忆。
+  - 质量门和 postmortem/改进闭环资料都指向同一个原则：重复失败必须变成可追踪证据和可验证行动项，不能只写总结。
+- 本地失败证据：
+  - 之前模板有 `FAILURE_LOG.md` 和迭代说明，但功能级 `REVIEW.md` 没有强制字段要求 AI 判断“是否升级工作台”。
+  - `quality_gate.py` 不能发现已完成、失败或阻塞的功能包是否漏掉工作台升级判断。
+
+决策：
+
+在功能包 `REVIEW.md` 增加 `workbench_upgrade_assessment` 状态字段，并让 `VERIFY.md`、`REVIEW.md`、`FAILURE_LOG.md`、`WORKBENCH.md` 和 `AGENTS.md` 同步说明。脚本层增加受控枚举和质量门检查：当功能已完成、验证失败、审查失败或处于阻塞状态时，如果该字段仍是 `unassessed`，质量门和本地审计必须报错。这样不能保证 AI 永远正确判断，但能把“是否需要升级工作台”从一句软提示变成项目证据和可检查状态。
+
+变更文件：
+
+- `skills/codex-workbench/assets/project-adapter-template/AGENTS.md`
+- `skills/codex-workbench/assets/project-adapter-template/WORKBENCH.md`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/feature-template/VERIFY.md`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/feature-template/REVIEW.md`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/feedback/FAILURE_LOG.md`
+- `skills/codex-workbench/scripts/workbench.py`
+- `skills/codex-workbench/references/project-adapter-template.md`
+- `skills/codex-workbench/references/quality-gate-patterns.md`
+- `skills/codex-workbench/references/workbench-maturity.md`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+
+验证结果：
+
+- `py -m py_compile skills/codex-workbench/scripts/workbench.py`：通过。
+- `self-test`：通过，生成项目工作台文件，验证通过，审计无 P0/P1。
+- 待运行 `golden-test`、`doctor` 和 `package-check --expected-version 1.1.0 --write-report`。
+
+后续动作：
+
+- 在真实项目试水时观察 AI 是否能正确选择 `not_required`、`failure_log_updated`、`template_update_needed`、`quality_gate_update_needed`、`review_rule_update_needed`、`ci_or_hook_needed` 或 `deferred_with_reason`。
+- 如果 AI 只是机械填写 `not_required`，下一步把“有失败却写 not_required 必须写原因和证据”的规则升级为更严格的 quality gate 或 review blocker。
+
 ### 2026-06-15 - 重写 README 的论证结构并补强评分/迭代解释
 
 问题：

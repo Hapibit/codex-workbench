@@ -140,6 +140,8 @@ python scripts/workbench.py upgrade --project <repo> --dry-run
 python scripts/workbench.py feature --project <repo> --name <feature-name> --dry-run
 python scripts/workbench.py validate --project <repo>
 python scripts/workbench.py audit --project <repo>
+python scripts/workbench.py retention --project <repo>
+python scripts/workbench.py retention --project <repo> --apply --write-report
 python scripts/workbench.py self-test
 python scripts/workbench.py golden-test
 python scripts/workbench.py doctor --plugin <plugin-root>
@@ -153,6 +155,7 @@ Use write-enabling or overwrite flags only after explicit user confirmation:
 
 - `generate` and `feature` write by default; use `--dry-run` first when previewing.
 - `upgrade` previews by default; use `--apply` to write after review.
+- `retention` previews by default. With `--apply`, it only archives older machine-generated reports from `.workbench-validation/`; it does not delete or rewrite human-maintained evidence logs.
 - Use `--force`, `--replace-docs`, or `--refresh-generated` only when the user explicitly accepts overwrite or refresh risk.
 - `user-workbench` previews by default; use `--apply` only after explicit user confirmation because it writes to the recipient's global Codex config.
 

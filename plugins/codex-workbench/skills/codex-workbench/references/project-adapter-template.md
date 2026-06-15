@@ -42,6 +42,8 @@ Required sections:
 - How single-feature failure evidence is stored in feature packages and repeated/cross-feature failures are summarized in `workbench/feedback/FAILURE_LOG.md`.
 - How AI implementation effectiveness is measured through `IMPLEMENTATION_NOTES.md`, `CHANGELOG.md`, `VERIFY.md`, `REVIEW.md`, `workbench/feedback/ITERATION_LOG.md`, and `workbench/feedback/AI_EFFECTIVENESS.md`.
 - How scorecard failures become updated templates, tests, gates, CI, hooks, or review criteria instead of a vanity metric.
+- How each feature review records `workbench_upgrade_assessment` so Codex must decide whether a failed, blocked, repeated, or review-missed issue should update the workbench.
+- How evidence retention works: current machine reports stay in `.workbench-validation/`, older machine reports may be archived, feature evidence stays with feature packages, and long-lived decisions move to ADR or versioned maintenance archives.
 - How to upgrade an existing workbench without replacing project-specific docs.
 - What recipient setup is required.
 - What is not covered.
@@ -162,7 +164,7 @@ Required files:
 - `IMPLEMENTATION_NOTES.md`: AI implementation notes, deviations, problems, fixes, and retest evidence.
 - `CHECKLIST.md`: stage gates for risk classification, spec completeness, clarification resolution, plan coverage, task quality, verification, and review.
 - `VERIFY.md`: command results, manual checks, browser/API/AI eval evidence, unverified items, residual risks.
-- `REVIEW.md`: P0/P1 checks, product baseline checks, code quality checks, findings format, AI error evidence, automation follow-up.
+- `REVIEW.md`: P0/P1 checks, product baseline checks, code quality checks, findings format, AI error evidence, `workbench_upgrade_assessment`, automation follow-up.
 - `CHANGELOG.md`: requirement changes, implementation changes, retest results, and downstream file updates.
 
 ## `workbench/feedback/FAILURE_LOG.md`
@@ -173,6 +175,7 @@ Required sections:
 - Evidence location rule: single-feature evidence goes to `workbench/features/<feature-name>/VERIFY.md`, `REVIEW.md`, and `DECISIONS.md`.
 - Cross-feature or repeated problems go to `workbench/feedback/FAILURE_LOG.md`.
 - Failure entry template with source feature package, problem type, severity, symptom, root cause, fixed location, automation target, automation status, and review result.
+- Failure entry template should reference the source feature package's `REVIEW.md` `workbench_upgrade_assessment` value so workbench upgrades are grounded in feature evidence.
 
 ## `workbench/feedback/ITERATION_LOG.md`
 
@@ -220,3 +223,4 @@ Required sections:
 - If a rule must not be skipped, pair it with a script, quality gate, pre-commit check, CI job, or Codex hook.
 - Do not add process ceremony without a verification signal. Every workbench rule should either guide a decision, route to a tool, or create evidence.
 - Do not ship a generated process as if it were confirmed by the team. Generated `DEVELOPMENT_FLOW.md` starts as `draft`.
+- Do not rely on final-chat promises for workbench upgrades. Completed, failed, blocked, or repeated-issue feature work must leave `workbench_upgrade_assessment` in `REVIEW.md`.

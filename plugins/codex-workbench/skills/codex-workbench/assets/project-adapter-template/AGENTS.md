@@ -36,8 +36,9 @@
 10. 代码变更后运行最小可靠验证；跨模块、高风险或用户要求时扩大验证。
 11. 运行项目质量门或 `workbench/scorecard/scorecard.py`，确认 `decision`、硬阻塞、可信度和剩余风险；不能用总分绕过 P0/P1、open blocker 或未完成复核。
 12. 修改后评估 AI 工作效果：返工原因、审查发现、质量门失败、是否需要升级模板或自动化，记录到 `workbench/feedback/AI_EFFECTIVENESS.md`。
-13. 最终回复必须说明改了什么、验证结果、未验证原因和剩余风险。
-14. 如果同类错误重复出现，把它沉淀到规则、测试、lint、CI、hook 或质量门，而不是只在对话里提醒。
+13. `VERIFY.md` 或 `REVIEW.md` 出现 failed、blocked、P0、P1、返工或重复问题时，必须在功能 `REVIEW.md` 的 `workbench_upgrade_assessment` 写明升级判断：`not_required`、`failure_log_updated`、`template_update_needed`、`quality_gate_update_needed`、`review_rule_update_needed`、`ci_or_hook_needed` 或 `deferred_with_reason`。
+14. 最终回复必须说明改了什么、验证结果、未验证原因和剩余风险。
+15. 如果同类错误重复出现，把它沉淀到规则、测试、lint、CI、hook 或质量门，而不是只在对话里提醒。
 
 ## 需求不清时
 
@@ -64,6 +65,7 @@
 - 高风险改动已有回滚路径或明确说明剩余风险。
 - 反复出现的问题已记录为后续工作台改进项；能自动化的优先进入脚本、测试或 CI。
 - AI 做错、返工、质量门失败或审查漏报时，单功能证据写入对应 `workbench/features/<feature-name>/VERIFY.md`、`REVIEW.md`、`DECISIONS.md`；跨功能重复问题写入 `workbench/feedback/FAILURE_LOG.md`，不能只留在聊天记录里。
+- `workbench_upgrade_assessment` 不能保持 `unassessed`；如果判断不需要升级，必须写明 `not_required` 和原因；如果需要升级，必须写明已写入 `FAILURE_LOG.md` 或后续要改模板、质量门、review、CI、hook 的位置。
 
 ## 质量门
 

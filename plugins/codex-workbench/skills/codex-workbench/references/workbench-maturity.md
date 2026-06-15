@@ -138,9 +138,11 @@ Required:
 - Repeated failures are classified as requirement, implementation, test, review, tool, or rule gaps.
 - Scorecard false positives, false negatives, and suspicious high-score/low-quality cases are recorded and used to adjust templates, reference lines, gates, CI, hooks, or review rules.
 - Repeated failures have source feature-package evidence and a summary in `workbench/feedback/FAILURE_LOG.md`.
+- Each completed, failed, blocked, or repeated-issue feature package records `workbench_upgrade_assessment` before it is treated as done, so Codex must explicitly decide whether the workbench needs a template, gate, review, CI, hook, or failure-log update.
 - Workbench package self-upgrades have maintainer evidence in the plugin repository, not only in chat history or generated reports.
 - Plugin maintainer evidence lives under `docs/maintenance/IMPROVEMENT_LOG.md`, `docs/maintenance/FAILURE_PATTERNS.md`, and `docs/maintenance/adr/`.
 - `.workbench-validation/` is reserved for generated validation reports such as `package-check-report.json`; do not use it as the long-term human-maintained improvement log.
+- Retention policy separates current machine reports, feature evidence, repeated failure summaries, and long-lived decisions so useful evidence is preserved without letting one file grow forever.
 - Automatable gaps become tests, lint rules, pre-commit, CI, hooks, or quality-gate checks.
 - Non-automatable business judgments stay in concise review rules with clear severity.
 - `audit`, `self-test`, and `golden-test` are run before publishing changes to the workbench package.
@@ -176,3 +178,5 @@ Risk: measurement can become ceremony if it does not lead to changed checks or c
 - Feedback notes accumulate but never become automated checks, clearer rules, or review criteria.
 - Scorecard becomes a vanity metric: high totals are used to bypass unresolved blockers, low confidence, missing calibration, component floor violations, missing semantic review, or architecture risk.
 - Workbench self-upgrade evidence exists only in `.workbench-validation/` or chat transcripts, so release decisions are not versioned with the plugin.
+- Feature reviews close without `workbench_upgrade_assessment`, so AI failures never become workbench improvements.
+- Logs and reports grow without retention categories, making agents read noisy evidence and hiding the current source of truth.
