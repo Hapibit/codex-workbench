@@ -1,6 +1,6 @@
 # Codex Workbench
 
-版本：`1.1.0`
+版本：`1.2.0`
 
 Codex Workbench 是给 Codex 使用的 AI 开发工作台插件。它不是一段更长的提示词，而是一套放进项目仓库里的工作方式：先把项目事实、产品需求、UX/原型、架构、交付计划、功能开发、验证审查、证据审计和失败复盘固定下来，再让 Codex 在这个框架里工作。
 
@@ -229,7 +229,7 @@ codex plugin add codex-workbench --marketplace hapibit
 默认安装 `main`，也就是当前最新版本。只有在复现实验、回滚问题或锁定生产环境时，才建议固定 tag：
 
 ```bash
-codex plugin marketplace add Hapibit/codex-workbench --ref v1.1.0
+codex plugin marketplace add Hapibit/codex-workbench --ref v1.2.0
 codex plugin add codex-workbench --marketplace hapibit
 ```
 
@@ -342,7 +342,7 @@ plugins/codex-workbench/skills/codex-workbench/
 发布前至少运行：
 
 ```bash
-python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py package-check --plugin plugins/codex-workbench --expected-version 1.1.0 --write-report
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py package-check --plugin plugins/codex-workbench --expected-version 1.2.0 --write-report
 ```
 
 发布包应该只暴露一个可见 skill：
