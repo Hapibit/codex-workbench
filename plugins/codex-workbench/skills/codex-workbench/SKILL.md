@@ -81,7 +81,7 @@ Routing rules:
 
 For every workbench task, follow this loop:
 
-1. Identify the active project path and current session boundary. If the user says this session is for workbench configuration, do not advance business-project code.
+1. Identify the active project path and current session boundary. If the user says this session is for workbench configuration, keep that boundary for later short commands such as "start", "continue", "plan", "optimize", "install", "publish", or "review"; do not advance business-project code unless the user explicitly switches scope.
 2. Inspect existing workbench state before choosing a stage: `PROJECT_INTAKE.md`, `AGENTS.md`, `WORKBENCH.md`, `FEATURE_WORKFLOW.md`, `workbench/features/`, `workbench/scorecard/`, and `.workbench-validation/` when present.
 3. Select exactly one primary stage from the router table. Load only the reference files needed for that stage.
 4. State blockers before edits. If users, scope, acceptance, data, permission, AI boundaries, or environment are unclear and materially affect the route, ask the minimum blocker questions.
@@ -164,7 +164,8 @@ Treat other people's skills as optional enhancement packs integrated through thi
 - This workbench does not configure private credentials, MCP auth, GitHub/Figma/Jenkins login, or local toolchains for recipients.
 - Do not promise that installed rules are hard gates unless a script, hook, CI job, test, or quality gate enforces them.
 - Do not start business project implementation from this skill unless the user explicitly changes session scope.
-- If the user says this session is for workbench configuration, only handle rules, skills, MCP, hooks, templates, quality gates, plugins, and package structure.
+- If the user says this session is for workbench configuration, only handle rules, skills, MCP, hooks, templates, quality gates, plugins, package structure, release maintenance, and workbench documentation.
+- Treat short follow-up commands as belonging to the current session boundary. If the boundary is ambiguous and the next action could touch business-project code, ask for the target scope before editing.
 
 ## Optional Skill Policy
 
