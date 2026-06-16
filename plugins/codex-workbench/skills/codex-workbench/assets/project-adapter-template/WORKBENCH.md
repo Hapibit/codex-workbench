@@ -76,7 +76,7 @@ Use Codex Workbench to tell me the next step for this project.
 本工作台的完整 0 到 1 流程是：
 
 ```text
-项目发现 -> 产品简报 -> PRD -> UX/原型 -> 架构设计 -> 交付计划 -> 功能包开发 -> 验证审查 -> 迭代复盘
+项目发现 -> 产品简报 -> PRD -> UX/原型 -> 架构设计 -> 交付计划 -> 功能包开发 -> 验证审查 -> 证据审计 -> 迭代复盘
 ```
 
 对应文件：
@@ -95,6 +95,74 @@ Use Codex Workbench to tell me the next step for this project.
 | 迭代复盘 | 需求变化、AI 效果、失败模式、自动化改进 | `workbench/feedback/` |
 
 这不是一次性瀑布流程。小改动可以走轻流程；新项目、核心功能、跨模块、高风险或需求不清时，必须先补前置事实源，再让 AI 实现。
+
+## 执行门禁
+
+工作台规则分三层：
+
+| 层级 | 作用 | 能否硬拦截 |
+| --- | --- | --- |
+| `AGENTS.md`、`WORKBENCH.md`、`FEATURE_WORKFLOW.md` | 告诉 AI 应该怎样工作 | 不能，只是指导 |
+| `workbench.py validate/audit`、`quality_gate.py`、`scorecard.py` | 检查项目状态、目录契约、功能包阶段和证据成熟度 | 可以拦截可检测问题 |
+| hook、pre-commit、CI、独立审查 | 拦截危险命令、缺失质量门、服务器端质量和高风险判断 | 可以拦截工具层和工程层问题 |
+
+因此，AI 每次要推进“开始、继续、下一步、规划、开发、实现、修复、复查”时，必须先完成状态自检：
+
+1. 确认当前会话职责。如果用户声明本会话是工作台配置会话，不推进业务项目代码。
+2. 读取 `PROJECT_INTAKE.md`、`WORKBENCH.md`、`FEATURE_WORKFLOW.md`、`workbench/features/` 和 `.workbench-validation/`。
+3. 判断本轮属于项目发现、产品规划、UX/原型、架构设计、交付计划、功能开发、验证审查、证据审计还是反馈复盘。
+4. 前置状态未通过、存在 open blocker、风险等级不匹配、验证计划缺失或目录契约不一致时，先停止并说明阻塞。
+5. 如果 AI 已经偏离流程，先做偏离复盘，不继续扩大改动。
+
+## 目录契约
+
+`workbench/` 是工作台证据目录，不是随意放材料的目录。允许的顶层目录只有：
+
+```text
+product/
+design/
+architecture/
+delivery/
+feature-template/
+features/
+quality/
+runtime/
+scorecard/
+review/
+feedback/
+archive/
+```
+
+`workbench/quality/quality_gate.py` 和 `workbench.py validate/audit` 会检查这个目录契约。
+
+如果发现额外目录，例如 `workbench/docs/`：
+
+1. 先判断它是不是用户已有资料、AI 误生成资料、重复资料或真正需要的新工作台层。
+2. 如果只是 AI 自己发明的工作台阶段，迁移到正确目录或删除。
+3. 如果确实要成为新工作台层，必须先更新目录契约、模板、质量门、README 和回归测试。
+
+仓库根目录的 `docs/` 不会自动失败，因为很多项目本来就有项目文档。但它默认不是工作台阶段；如果工作台文档引用 `docs/`，必须说明它是项目普通文档、交付文档还是需要迁移到 `workbench/` 的证据。
+
+## 偏离复盘
+
+用户指出以下情况时，不要继续推进原任务：
+
+- AI 没有按工作台阶段推进。
+- AI 没有按要求先搜索资料。
+- AI 在工作台配置会话里推进了业务项目。
+- AI 自行发明了目录、阶段或交付层。
+- AI 绕过了功能包、质量门、review 或证据审计。
+
+处理顺序：
+
+```text
+暂停当前推进
+-> 说明偏离点
+-> 找到没有被拦住的原因
+-> 判断应改模板、脚本、质量门、hook、CI、review prompt 还是回归测试
+-> 把重复或高风险问题写入 workbench/feedback/FAILURE_LOG.md
+-> 修复后重新运行 validate/audit/quality gate
+```
 
 ## AI 实现后的闭环
 

@@ -87,6 +87,7 @@ For every workbench task, follow this loop:
 4. State blockers before edits. If users, scope, acceptance, data, permission, AI boundaries, or environment are unclear and materially affect the route, ask the minimum blocker questions.
 5. Produce or update the stage artifact, then validate with the bundled script or project quality gate when available.
 6. Report the next concrete step and any validation gap. Do not claim the workbench is a hard gate unless a script, hook, CI job, test, or quality gate enforces it.
+7. If the user points out skipped rules, stage mismatch, or invented workbench layers, pause and perform deviation review before continuing.
 
 Keep `SKILL.md` lean. Move detailed explanations to `references/`, deterministic behavior to `scripts/`, and reusable files to `assets/`.
 
@@ -99,6 +100,7 @@ Separate public workbench concepts from internal implementation tools:
 - Internal tools: bundled scripts, templates, references, optional specialist skills, MCP servers.
 - Generated project files should mostly describe public concepts and project-local commands, not require users to know internal skill names.
 - If an internal tool name is needed, keep it in plugin/skill docs or maintainer instructions, not as a prerequisite in project-local docs.
+- The generated project workbench must keep a declared directory contract; invented layers such as `workbench/docs/` are invalid unless promoted through the template, script, and regression tests.
 - The project workbench must remain usable as plain repository files plus local scripts.
 
 ## Default User Flow

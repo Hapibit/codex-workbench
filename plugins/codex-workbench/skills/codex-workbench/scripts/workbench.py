@@ -120,6 +120,9 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
     "AGENTS.md": [
         "需求不清",
         "完成标准",
+        "执行门禁",
+        "目录契约",
+        "偏离复盘",
         "quality_gate.py",
         "PRODUCT_BRIEF.md",
         "PRD.md",
@@ -142,6 +145,9 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "接收者配置",
         "工作台审计",
         "标准开发流程",
+        "执行门禁",
+        "目录契约",
+        "偏离复盘",
         "PRODUCT_BRIEF.md",
         "PRD.md",
         "UX_SPEC.md",
@@ -419,6 +425,31 @@ DEFAULT_RETENTION_KEEP_REPORTS = 5
 MAINTENANCE_LOG_WARN_BYTES = 96 * 1024
 MAINTENANCE_LOG_ARCHIVE_BYTES = 160 * 1024
 
+ALLOWED_WORKBENCH_TOP_LEVEL_DIRS = {
+    "product",
+    "design",
+    "architecture",
+    "delivery",
+    "feature-template",
+    "features",
+    "quality",
+    "runtime",
+    "scorecard",
+    "review",
+    "feedback",
+    "archive",
+}
+
+PROJECT_FACING_DOC_FILES = [
+    "AGENTS.md",
+    "PROJECT_INTAKE.md",
+    "WORKBENCH.md",
+    "REVIEW.md",
+    "DEVELOPMENT_FLOW.md",
+    "PRODUCT_BASELINE.md",
+    "FEATURE_WORKFLOW.md",
+]
+
 PROCESS_STATUSES = {"draft", "confirmed"}
 INTAKE_STATUSES = {"draft", "confirmed"}
 FEATURE_STAGE_ORDER = ["spec", "clarify", "design", "plan", "tasks", "implement", "verify", "review", "complete"]
@@ -517,6 +548,7 @@ AGENTS_MD_NEAR_LIMIT_BYTES = 24 * 1024
 PACKAGING_MANIFEST_REQUIRED_INCLUDES = [
     ".codex-plugin/plugin.json",
     "README.md",
+    "hooks/**",
     "docs/USER_WORKBENCH.md",
     "skills/codex-workbench/**",
     "docs/maintenance/**",
@@ -1057,6 +1089,7 @@ def template_variables(project_name: str, inspection: dict[str, Any]) -> dict[st
 def generate_quality_gate_py(commands: list[dict[str, Any]]) -> str:
     command_json = quote_json(commands)
     feature_files_json = quote_json(FEATURE_PACKAGE_FILES)
+    allowed_dirs_json = quote_json(sorted(ALLOWED_WORKBENCH_TOP_LEVEL_DIRS))
     return f'''#!/usr/bin/env python3
 from __future__ import annotations
 
@@ -1071,6 +1104,7 @@ from pathlib import Path
 
 COMMANDS = {command_json}
 FEATURE_PACKAGE_FILES = {feature_files_json}
+ALLOWED_WORKBENCH_TOP_LEVEL_DIRS = set({allowed_dirs_json})
 
 
 def project_root() -> Path:
@@ -1112,6 +1146,24 @@ def check_project_intake(root: Path) -> str | None:
     if re.search(r"(?im)^\\|\\s*P\\d+\\s*\\|.*\\|\\s*open\\s*\\|\\s*$", text):
         raise SystemExit("[quality] PROJECT_INTAKE.md has open blocking project-intake questions.")
     return str(intake.relative_to(root))
+
+
+def check_directory_contract(root: Path) -> list[str]:
+    workbench = root / "workbench"
+    if not workbench.exists():
+        return []
+    for child in sorted(workbench.iterdir(), key=lambda item: item.name.lower()):
+        if child.is_dir() and child.name not in ALLOWED_WORKBENCH_TOP_LEVEL_DIRS:
+            raise SystemExit(
+                f"[quality] undeclared workbench directory {{child.relative_to(root)}}. "
+                "Move it under a declared directory, document it in WORKBENCH.md, or upgrade the workbench directory contract."
+            )
+        if child.is_file():
+            raise SystemExit(
+                f"[quality] unexpected file directly under workbench/: {{child.relative_to(root)}}. "
+                "Put durable evidence in a declared subdirectory."
+            )
+    return ["workbench directory contract"]
 
 
 def read_text(path: Path) -> str:
@@ -1294,6 +1346,9 @@ def main() -> int:
     if checked_intake:
         print(f"[quality] checked project intake: {{checked_intake}}")
         checks_run.append("project intake blockers")
+    for checked_contract in check_directory_contract(root):
+        print(f"[quality] checked {{checked_contract}}")
+        checks_run.append(checked_contract)
     checked_features = check_feature_packages(root)
     if checked_features:
         print(f"[quality] checked SDD feature packages: {{', '.join(checked_features)}}")
@@ -2318,6 +2373,9 @@ def validate_adapter(project: Path) -> dict[str, Any]:
     placeholders: list[str] = []
     python_errors: list[str] = []
     feature_errors: list[str] = []
+    directory_contract_report = directory_contract(project)
+    directory_errors = directory_contract_report["errors"]
+    directory_warnings = directory_contract_report["warnings"]
     intake_status: str | None = None
     intake_status_error: str | None = None
     process_status: str | None = None
@@ -2370,11 +2428,13 @@ def validate_adapter(project: Path) -> dict[str, Any]:
         "placeholders": placeholders,
         "pythonErrors": python_errors,
         "featureErrors": feature_errors,
+        "directoryErrors": directory_errors,
+        "directoryWarnings": directory_warnings,
         "intakeStatus": intake_status,
         "intakeStatusError": intake_status_error,
         "processStatus": process_status,
         "processStatusError": process_status_error,
-        "passed": not missing and not placeholders and not python_errors and not feature_errors and not intake_status_error and not process_status_error,
+        "passed": not missing and not placeholders and not python_errors and not feature_errors and not directory_errors and not intake_status_error and not process_status_error,
     }
     return report
 
@@ -2559,6 +2619,34 @@ def read_text_safe(path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="replace")
     except Exception:
         return ""
+
+
+def directory_contract(project: Path) -> dict[str, list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    workbench = project / "workbench"
+    if workbench.exists():
+        for child in sorted(workbench.iterdir(), key=lambda item: item.name.lower()):
+            rel = rel_to(project, child)
+            if child.is_dir() and child.name not in ALLOWED_WORKBENCH_TOP_LEVEL_DIRS:
+                errors.append(
+                    f"{rel}: undeclared workbench top-level directory. Move it under an allowed directory, "
+                    "document it in WORKBENCH.md, or update the workbench directory contract."
+                )
+            elif child.is_file():
+                warnings.append(
+                    f"{rel}: unexpected file directly under workbench/. Put durable evidence in a declared subdirectory."
+                )
+
+    docs_dir = project / "docs"
+    if docs_dir.exists() and workbench.exists():
+        warnings.append(
+            "docs/: root docs directory exists. Treat it as project-owned documentation unless WORKBENCH.md explicitly classifies it; "
+            "do not let AI invent it as a workbench stage."
+        )
+
+    return {"errors": errors, "warnings": warnings}
 
 
 def frontmatter_field(text: str, name: str) -> str | None:
@@ -2758,6 +2846,13 @@ def audit_adapter(project: Path) -> dict[str, Any]:
     for error in validation.get("featureErrors", []):
         rel = error.split(":", 1)[0]
         findings.append(issue("P1", "incomplete-feature-package", error, rel))
+    for error in validation.get("directoryErrors", []):
+        rel = error.split(":", 1)[0]
+        findings.append(issue("P1", "directory-contract-violation", error, rel))
+    for warning in validation.get("directoryWarnings", []):
+        rel = warning.split(":", 1)[0] if ":" in warning else None
+        code = "root-docs-needs-classification" if warning.startswith("docs/:") else "directory-contract-warning"
+        findings.append(issue("P2", code, warning, rel))
     if validation.get("intakeStatusError"):
         findings.append(issue("P1", "invalid-project-intake-status", validation["intakeStatusError"], "PROJECT_INTAKE.md"))
     if validation.get("processStatusError"):
@@ -3171,12 +3266,49 @@ def run_upgrade_golden_case() -> dict[str, Any]:
         }
 
 
+def run_workbench_guard_golden_case() -> dict[str, Any]:
+    failures: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="codex-workbench-golden-guardrails-") as tmp:
+        root = Path(tmp)
+        write_sample_node(root)
+        generate_adapter(root, "guardrails", force=False, dry_run=False)
+
+        rogue_dir = root / "workbench" / "docs"
+        rogue_dir.mkdir(parents=True)
+        (rogue_dir / "DELIVERY.md").write_text("# Invented Workbench Docs Layer\n", encoding="utf-8")
+        validation = validate_adapter(root)
+        audit = audit_adapter(root)
+        assert_condition(not validation["passed"], "guardrails: undeclared workbench/docs should fail validation", failures)
+        assert_condition(any("workbench/docs" in item for item in validation["directoryErrors"]), "guardrails: missing workbench/docs directory error", failures)
+        assert_condition(any(finding["code"] == "directory-contract-violation" for finding in audit["findings"]), "guardrails: audit should report directory contract violation", failures)
+
+        shutil.rmtree(rogue_dir)
+        project_docs = root / "docs"
+        project_docs.mkdir()
+        (project_docs / "README.md").write_text("# Project Docs\n", encoding="utf-8")
+        validation_with_root_docs = validate_adapter(root)
+        audit_with_root_docs = audit_adapter(root)
+        assert_condition(validation_with_root_docs["passed"], "guardrails: project-owned root docs should not fail validation", failures)
+        assert_condition(any("root docs directory exists" in item for item in validation_with_root_docs["directoryWarnings"]), "guardrails: root docs should produce classification warning", failures)
+        assert_condition(any(finding["code"] == "root-docs-needs-classification" for finding in audit_with_root_docs["findings"]), "guardrails: audit should warn about root docs classification", failures)
+
+        return {
+            "name": "workbench-guardrails",
+            "passed": not failures,
+            "failures": failures,
+            "directoryErrors": validation["directoryErrors"],
+            "directoryWarnings": validation_with_root_docs["directoryWarnings"],
+            "auditSummary": audit_with_root_docs["summary"],
+        }
+
+
 def run_golden_test() -> dict[str, Any]:
     cases = [
         run_golden_case("node-vite", write_sample_node),
         run_golden_case("maven-basic", write_sample_maven),
         run_golden_case("fullstack-compose", write_sample_fullstack),
         run_upgrade_golden_case(),
+        run_workbench_guard_golden_case(),
     ]
     return {
         "schema": "codex-workbench-golden-test/v1",
@@ -3287,6 +3419,44 @@ def validate_plugin_manifest(plugin: Path) -> tuple[dict[str, Any] | None, list[
     return manifest, findings
 
 
+def validate_plugin_hooks(plugin: Path) -> list[dict[str, str]]:
+    findings: list[dict[str, str]] = []
+    hooks_json = plugin / "hooks" / "hooks.json"
+    hook_script = plugin / "hooks" / "workbench-hard-gate.ps1"
+    if not hooks_json.exists():
+        findings.append(doctor_issue("P1", "missing-plugin-hooks-json", "Plugin should bundle hooks/hooks.json for local lifecycle guardrails.", rel_to(plugin, hooks_json)))
+    else:
+        try:
+            hooks = json.loads(hooks_json.read_text(encoding="utf-8"))
+        except Exception as exc:
+            findings.append(doctor_issue("P1", "invalid-plugin-hooks-json", f"Plugin hooks.json is not valid JSON: {exc}", rel_to(plugin, hooks_json)))
+        else:
+            if not isinstance(hooks.get("hooks"), dict):
+                findings.append(doctor_issue("P1", "invalid-plugin-hooks-shape", "Plugin hooks.json should contain a top-level hooks object.", rel_to(plugin, hooks_json)))
+            serialized = json.dumps(hooks, ensure_ascii=False)
+            if "workbench-hard-gate.ps1" not in serialized:
+                findings.append(doctor_issue("P1", "plugin-hooks-missing-hard-gate", "Plugin hooks should invoke workbench-hard-gate.ps1.", rel_to(plugin, hooks_json)))
+    if not hook_script.exists():
+        findings.append(doctor_issue("P1", "missing-plugin-hook-script", "Plugin should bundle hooks/workbench-hard-gate.ps1.", rel_to(plugin, hook_script)))
+    else:
+        text = read_text_safe(hook_script)
+        required_terms = [
+            "Get-WorkbenchAllowedTopDirs",
+            "Test-AllowedExplicitRecursiveDelete",
+            "Test-ProtectedDeletionPath",
+            "Test-SearchOrReadOnlyCommand",
+            "projectMarkers",
+            "-LiteralPath",
+            "workbench\\docs\\",
+            "quality-gate.ps1",
+            "bypassPermissions",
+        ]
+        missing_terms = [term for term in required_terms if term not in text]
+        if missing_terms:
+            findings.append(doctor_issue("P1", "incomplete-plugin-hook-script", f"Plugin hook script is missing required guardrail terms: {', '.join(missing_terms)}.", rel_to(plugin, hook_script)))
+    return findings
+
+
 def validate_maintenance_evidence(plugin: Path) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     for rel, required_terms in MAINTENANCE_EVIDENCE_FILES.items():
@@ -3339,6 +3509,8 @@ def doctor_workbench(plugin_path: str | None = None) -> dict[str, Any]:
         checks.append("plugin manifest")
         manifest, manifest_findings = validate_plugin_manifest(plugin)
         findings.extend(manifest_findings)
+        checks.append("plugin bundled hooks")
+        findings.extend(validate_plugin_hooks(plugin))
         plugin_skill = plugin / "skills" / "codex-workbench"
         if plugin_skill.exists():
             checks.append("plugin skill required files")

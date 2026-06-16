@@ -32,6 +32,139 @@
 
 ## 记录
 
+### 2026-06-16 - 让 hook 区分明确授权的普通目录删除和工作台核心删除
+
+问题：
+
+用户明确要求删除 `E:\ai-edu-agent\docs`，但旧的 `PreToolUse` 门禁把所有 `Remove-Item -Recurse -Force` 一刀切拦住，连已经用 `-LiteralPath` 且路径已校验的安全删除也不放行；同时它还会把只读搜索命令里的危险字样误判为真实删除命令。
+
+证据来源：
+
+- 用户反馈：明确指出这个 hook 设计有问题，要求允许用户已确认且路径已校验的删除。
+- 官方/外部资料：
+  - OpenAI Codex hooks 文档说明 `PreToolUse` 是 guardrail，不是绝对边界；可按事件和命令形态做定向阻断。
+  - 官方文档还说明 hooks 是命令级生命周期脚本，应该区分 `Bash`、`apply_patch`、`PermissionRequest` 和 `Stop` 的职责。
+- 本地失败证据：
+  - 旧 hook 用 `Remove-Item.*-Recurse.*-Force` 直接匹配，误伤所有递归删除。
+  - 旧 hook 没有识别 `-LiteralPath`、绝对路径和保护路径。
+  - 旧 hook 的 destructive 检查会误把搜索命令里的示例文本当作真实命令。
+
+决策：
+
+把门禁从“字符串里看到递归删除就拦”改成“只有当命令真的在删除高风险目标时才拦”。规则分成两层：一层仍阻止根目录、用户目录、`.codex`、仓库根、`.git`、`workbench` 核心目录和工作台规则文件被删；另一层允许用户明确写出的普通绝对路径、并且带 `-LiteralPath` 的递归删除，只要它不是保护路径。这样能保住工作台核心，同时不再误杀普通项目清理。
+
+变更文件：
+
+- `.codex/hooks/workbench-hard-gate.ps1`
+- `hooks/workbench-hard-gate.ps1`
+- `skills/codex-workbench/scripts/workbench.py`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+
+验证结果：
+
+- 待运行模拟用例：`Remove-Item -LiteralPath 'E:\ai-edu-agent\docs' -Recurse -Force` 应该允许。
+- 待运行模拟用例：`Remove-Item -LiteralPath 'E:\ai-edu-agent' -Recurse -Force` 应该拦截。
+- 待运行模拟用例：`rg -n "Remove-Item.*-Recurse.*-Force"` 不应再被误判为危险删除。
+
+后续动作：
+
+- 运行 hook 模拟、PowerShell 语法检查、`doctor` 和 `package-check` 复检。
+- 如果后续还出现“明确授权但被拦”的场景，再把允许条件收敛到更精确的绝对路径和参数组合。
+
+### 2026-06-16 - 把工作台硬门禁同步到插件 hook 包
+
+问题：
+
+用户确认当前会话里已经加载了个人全局 hook，但发布插件包里还没有一套随包分发的 hook。这样会导致别人安装 `codex-workbench` 后，只能拿到 skill/template/script 层，而拿不到同等的本地拦截和阶段提醒；同时 README 也需要明确“插件带 hook，但每个使用者仍要自己在 Codex 里信任它们”。
+
+证据来源：
+
+- 用户反馈：直接问“有没有改hook？”并要求继续完善工作台门禁。
+- 官方/外部资料：
+  - OpenAI Codex hooks 文档说明 hooks 是生命周期脚本，只能作为 deterministic guardrails，不是完整安全边界。
+  - 官方文档还说明插件可以携带 hooks/hooks.json，安装后仍需用户 review/trust。
+  - OpenAI 关于插件的资料强调插件是分发单元，生命周期配置可以和 plugin 一起打包。
+- 本地失败证据：
+  - 个人全局 hook 已经有门禁，但发布包没有 hooks/ 目录。
+  - package-check 之前没有校验插件 hook 文件存在与语法。
+  - README 里没有明确说明“插件带 hook，但安装后仍需信任”。
+
+决策：
+
+把随包 hook 作为插件能力的一部分，但不把它伪装成自动可信的系统级门禁。插件包新增 `hooks/hooks.json` 和 `hooks/workbench-hard-gate.ps1`，并把发布检查升级为：插件 hook 必须存在、必须可解析、必须调用 `workbench-hard-gate.ps1`。README 说明安装后仍需用户自己的 Codex `/hooks` 信任流程。这样做能把“流程提醒”和“工具层门禁”一起带给使用者，但不会越过官方 hook trust 边界。
+
+变更文件：
+
+- `hooks/hooks.json`
+- `hooks/workbench-hard-gate.ps1`
+- `packaging-manifest.json`
+- `README.md`
+- `skills/codex-workbench/scripts/workbench.py`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+
+验证结果：
+
+- PowerShell 语法检查通过。
+- 模拟 `PreToolUse`：`workbench/docs/` 被拒绝。
+- 模拟 `PreToolUse`：根目录 `docs/` 被允许。
+- 模拟 `Stop`：工作台违规目录会触发阻断。
+- 复检发现插件 hook 初版没有 UTF-8 BOM，在 Windows PowerShell 5.1 下中文字符串会被误读并导致解析失败；已改为 UTF-8 BOM 后重新验证通过。
+- `package-check --expected-version 1.2.0 --write-report`：通过，P0/P1/P2/P3 均为 0。
+
+后续动作：
+
+- 运行 `package-check`，确认发布包把 hooks 当成正式分发内容。
+- 如果后续发现 hook 逻辑和个人全局 hook 继续分叉，再决定是否把部分逻辑抽成共享脚本。
+
+### 2026-06-16 - 发布版本提升到 1.2.0，并把流程偏离转成可检测门禁
+
+问题：
+
+用户在真实会话中发现 AI 会跳过工作台规则：没有先确认会话职责、没有按项目阶段读取状态、把业务项目推进和工作台配置混在一起、把非标准 `docs/` 层解释成工作台阶段，或者在没有搜索资料时声称参考了资料。这个问题不能继续只靠 README 或 AGENTS.md 的软提示解决；需要把能检测的偏离转成脚本、质量门和回归样例。
+
+证据来源：
+
+- 用户反馈：另一个会话明确承认“按工程直觉推进了任务，没有按工作台阶段门推进任务”；用户要求复查并优化，且要求复检时搜索相关资料。
+- 官方/外部资料：
+  - OpenAI Codex 官方资料把 `AGENTS.md`、skills、plugins、hooks、sandbox/approval、`/review` 和 `/diff` 分成不同职责层，说明持久规则、复用流程、工具生命周期和人工复查应该分层使用。
+  - OpenAI Codex best practices 与 customization 资料强调：稳定规则放到仓库指令，重复流程放到 skill/plugin，确定性行为放到脚本或工具，不要把所有东西堆进长提示词。
+  - Microsoft Spec-Driven Development 资料强调：先定义 intent、消除歧义、带约束规划、再用 AI 实现并按 spec 验证。
+  - Addy Osmani 关于 AI agent spec 的资料强调：spec 应成为版本控制和 CI/CD 里的可执行工件，每个阶段验证后再进入下一步。
+  - Martin Fowler 关于 humans and agents loops 的资料强调：人应该维护由规格、质量检查和工作流规则组成的 agent harness，而不是只在最内层逐行盯代码。
+  - SonarQube quality gates、Google SRE postmortem 与 agent 改进循环资料共同指向：重复失败要变成明确检查、行动项和可验证完成标准，而不是只留在对话总结里。
+- 本地失败证据：
+  - 项目模板已有阶段说明，但 `validate/audit` 没有检查工作台顶层目录契约。
+  - 生成的 `quality_gate.py` 没有拦截 AI 自己发明的 `workbench/docs/` 等非标准目录。
+  - `REQUIRED_ADAPTER_TEXT_BY_FILE` 没有把 `执行门禁`、`目录契约`、`偏离复盘` 作为模板必含文本。
+  - 没有 golden-test 复现“AI 发明工作台目录”和“根目录 docs 需要分类但不应直接失败”的差异。
+
+决策：
+
+将本次改动作为 minor 版本 `1.2.0`。原因是它新增了向后兼容的能力：目录契约、偏离复盘、质量门检查和回归样例；没有改变公开命令入口，也没有移除旧模板字段。
+
+本次升级不追求“让 AI 永远不会跳过规则”，而是把可检测问题提前暴露：`workbench/` 只能使用声明过的顶层目录；`workbench/docs/` 这类 AI 发明层会导致 validate/audit/quality gate 失败；根目录 `docs/` 不直接失败，但 audit 会提示必须分类；模板必须包含执行门禁、目录契约和偏离复盘；重复偏离要进入 `FAILURE_LOG.md`、模板、质量门、hook、CI、review prompt 或 golden-test。
+
+变更文件：
+
+- `.codex-plugin/plugin.json`
+- `README.md`
+- `skills/codex-workbench/assets/project-adapter-template/AGENTS.md`
+- `skills/codex-workbench/assets/project-adapter-template/WORKBENCH.md`
+- `skills/codex-workbench/scripts/workbench.py`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+- `docs/maintenance/FAILURE_PATTERNS.md`
+
+验证结果：
+
+- `py -m py_compile skills/codex-workbench/scripts/workbench.py`：通过，只有环境警告 `Could not find platform independent libraries <prefix>`，但退出码为 0。
+- `py .\skills\codex-workbench\scripts\workbench.py self-test`：通过。
+- `py .\skills\codex-workbench\scripts\workbench.py golden-test`：通过，`workbench/docs/` 回归用例会失败，根目录 `docs/` 只产生分类警告。
+- `py .\skills\codex-workbench\scripts\workbench.py package-check --plugin <plugin-root> --expected-version 1.2.0 --write-report`：通过，P0/P1/P2/P3 均为 0。
+
+后续动作：
+
+- 用真实项目试水时重点观察：AI 是否先执行阶段自检；是否会把根目录 `docs/` 误当工作台阶段；如果用户指出偏离，AI 是否先复盘并判断应升级模板、脚本、质量门、hook、CI、review prompt 还是回归样例。
+
 ### 2026-06-16 - 发布版本提升到 1.1.1，并优化工作台提示词路由
 
 问题：

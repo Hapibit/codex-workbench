@@ -3,6 +3,7 @@
   "include": [
     ".codex-plugin/plugin.json",
     "README.md",
+    "hooks/**",
     "docs/WORKFLOW_AND_SCORECARD.md",
     "docs/ITERATION_UPGRADE.md",
     "docs/USER_WORKBENCH.md",
@@ -24,6 +25,7 @@
   ],
   "notes": [
     "The distributed package should expose one visible skill only.",
+    "Plugin-bundled hooks live under hooks/ and must be reviewed/trusted by each recipient after install.",
     "Bundled scripts, templates, and references live under skills/codex-workbench.",
     "Long-term maintainer evidence lives under docs/maintenance and is packaged for release review.",
     ".workbench-validation is generated validation output and must not be packaged.",

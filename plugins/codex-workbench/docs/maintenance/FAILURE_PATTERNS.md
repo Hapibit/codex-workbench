@@ -21,6 +21,76 @@
 
 ## 失败模式
 
+### FP-010 - hook 把明确授权的普通目录删除误判为危险命令
+
+失败模式：
+
+工作台硬门禁为了阻止破坏性命令，把所有 `Remove-Item -Recurse -Force` 都当作高风险操作阻断。这样能防止误删，但也会误杀用户明确要求、AI 已经解析并校验过绝对路径的普通项目目录删除，例如清理不属于工作台结构的根目录 `docs\`。
+
+证据位置：
+
+- 用户明确要求删除 `E:\ai-edu-agent\docs`，但 `PreToolUse` hook 仍然阻断。
+- 旧规则只用正则 `Remove-Item.*-Recurse.*-Force` 判断，没有区分 `-LiteralPath`、路径根、仓库根、工作台核心目录和普通项目目录。
+- 只读搜索命令里出现危险命令样例时，也可能被 destructive 检查误伤。
+
+工作台处理层：
+
+- hook 层：新增 `Test-AllowedExplicitRecursiveDelete`、`Test-ProtectedDeletionPath` 和 `Get-LiteralPathsFromCommandSegment`，允许明确绝对路径且非保护目录的 `Remove-Item -LiteralPath ... -Recurse -Force`。
+- hook 层：继续阻止盘符根、用户目录、`.codex`、仓库根、`.git`、`workbench` 核心目录、工作台规则文件和 `workbench/docs`。
+- 脚本层：`package-check` 检查插件 hook 是否包含显式递归删除、保护路径和只读搜索识别逻辑。
+
+自动化状态：
+
+- 已自动化：发布包 hook 和个人 hook 同步修正；发布检查会检查关键防护函数是否存在。
+- 仍需人工：真正执行递归删除前，仍要由用户明确指定目标；AI 不能自行扩大删除范围，也不能把路径变量、通配符或相对路径当作安全目标。
+
+### FP-008 - AI 跳过阶段门或发明工作台目录层
+
+失败模式：
+
+当用户给出“开始、继续、规划、复查”等短指令时，AI 可能按工程直觉直接推进实现，而不是先读取项目画像、开发流程、功能包状态和验证证据。另一个表现是 AI 把根目录 `docs/` 或自己生成的 `workbench/docs/` 解释成新的工作台阶段，导致项目结构和工作台契约不一致。
+
+证据位置：
+
+- 用户在真实会话中指出 AI 没有按工作台规则来，并要求回顾为什么跳过规则。
+- 会话复盘显示：AI 没有把工作台当成状态机使用，没有先读当前阶段和功能包状态，还把 `docs/` 解释成“交付阅读层”。
+- `assets/project-adapter-template/` 已有阶段说明，但旧 `validate/audit` 没有检查工作台顶层目录契约。
+
+工作台处理层：
+
+- 模板层：`AGENTS.md` 和 `WORKBENCH.md` 增加 `执行门禁`、`目录契约` 和 `偏离复盘`。
+- 脚本层：`validate`、`audit` 和生成的 `quality_gate.py` 检查 `workbench/` 顶层目录契约；`workbench/docs/` 这类未声明目录会成为 P1 或质量门失败。
+- 回归层：`golden-test` 增加 guardrails 用例，确认未声明 `workbench/docs/` 会失败，根目录 `docs/` 只触发分类警告。
+- 维护层：重复偏离必须进入 `FAILURE_LOG.md`，并判断应升级模板、脚本、质量门、hook、CI、review prompt 还是回归测试。
+
+自动化状态：
+
+- 已自动化：新项目模板包含门禁说明；`validate/audit` 和质量门检查目录契约；`golden-test` 覆盖目录误用。
+- 仍需人工：会话职责、搜索优先级和业务语义判断不能完全靠脚本判断；需要 AI 在执行前做状态自检，发现偏离时先复盘。
+
+### FP-009 - 插件有 hook 但没有说明仍需用户信任
+
+失败模式：
+
+发布包可以携带 hooks/hooks.json 和 hook 脚本，但如果 README 没有明确说明“安装后仍需每个使用者自己在 Codex 里 review/trust”，用户可能误以为安装插件就自动获得了系统级硬门禁。这样会把可审查的本地 guardrail 误读成自动可信的全局策略。
+
+证据位置：
+
+- 官方 hooks 文档说明：非 managed command hooks 需要 review 和 trust；插件可以携带 hook，但不会自动跳过 trust。
+- 本地 README 早期只说明了 skill、模板和维护证据，没有说明插件 hook 的 trust 边界。
+- 发布包最初没有 hooks/ 目录，导致“装了插件就有门禁”的预期和现实不一致。
+
+工作台处理层：
+
+- 说明层：README 增加“插件带 hook，但安装后仍需 trust”的说明。
+- 发布层：`packaging-manifest.json` 允许并显式记录 `hooks/**`。
+- 脚本层：`package-check` 检查 hook JSON、hook 脚本和关键防护词，避免发布包漏掉本地门禁。
+
+自动化状态：
+
+- 已自动化：发布包会检查 hook 文件是否存在、是否可解析、是否调用门禁脚本。
+- 仍需人工：每个使用者仍要在自己的 Codex 里 review/trust hook，这是官方机制要求，不能被插件替代。
+
 ### FP-007 - scorecard 高分可能被当成质量证明
 
 失败模式：

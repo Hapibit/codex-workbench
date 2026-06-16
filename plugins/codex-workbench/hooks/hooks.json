@@ -1,0 +1,85 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "timeout": 30,
+            "statusMessage": "加载 Codex Workbench 门禁"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "timeout": 30,
+            "statusMessage": "检查工作台流程边界"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "timeout": 30,
+            "statusMessage": "检查工作台硬门禁"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "timeout": 30,
+            "statusMessage": "检查高风险权限申请"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "timeout": 30,
+            "statusMessage": "检查子代理工作台边界"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "commandWindows": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:PLUGIN_ROOT/hooks/workbench-hard-gate.ps1\"",
+            "timeout": 30,
+            "statusMessage": "检查结束前工作台门禁"
+          }
+        ]
+      }
+    ]
+  }
+}
