@@ -227,7 +227,7 @@ codex plugin add codex-workbench --marketplace hapibit
 默认安装 `main`，也就是当前最新版本。只有在复现实验、回滚问题或锁定生产环境时，才建议固定 tag：
 
 ```bash
-codex plugin marketplace add Hapibit/codex-workbench --ref v1.1.0
+codex plugin marketplace add Hapibit/codex-workbench --ref v1.1.1
 codex plugin add codex-workbench --marketplace hapibit
 ```
 
@@ -292,6 +292,8 @@ python skills/codex-workbench/scripts/workbench.py user-workbench --apply
 
 Codex Workbench 本身可以独立使用。其他 skill、MCP 或第三方工具只是在具体任务中增强能力，不是入门门槛。
 
+用户不需要一开始判断“需求分析、产品规划、UX、架构分别用哪个 skill”。统一入口始终是 Codex Workbench；工作台先判断当前阶段，再在内部选择核心模板、脚本和可选增强能力。
+
 | 任务 | 可选增强 |
 | --- | --- |
 | UI、Figma、前端还原 | UI/Figma 类 skill |
@@ -322,7 +324,7 @@ skills/codex-workbench/
 发布前至少运行：
 
 ```bash
-python skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 1.1.0 --write-report
+python skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 1.1.1 --write-report
 ```
 
 发布包应该只暴露一个可见 skill：

@@ -1,6 +1,6 @@
 {
   "name": "codex-workbench",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A low-friction Codex workbench package with one visible skill entrypoint for project intake, workbench generation, feature workflows, quality gates, and review rules.",
   "author": {
     "name": "Hapibit"
@@ -16,7 +16,10 @@
     "defaultPrompt": [
       "Use Codex Workbench to set up this project's AI workbench.",
       "Use Codex Workbench to tell me the next step for this project.",
-      "Use Codex Workbench to audit this workbench for sharing."
+      "Use Codex Workbench to create a feature work package named <feature-name>.",
+      "Use Codex Workbench to validate this project workbench.",
+      "Use Codex Workbench to preview an upgrade for this project workbench.",
+      "Use Codex Workbench to audit this project workbench for sharing."
     ]
   }
 }

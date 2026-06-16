@@ -7,6 +7,15 @@ description: One low-friction entrypoint for using the Codex project workbench. 
 
 Use this as the single user-facing entrypoint. The user should not need to know which internal skill to call, install, or configure.
 
+## Prompt Language Policy
+
+Use a bilingual split instead of making every prompt either English or Chinese:
+
+- Keep this `SKILL.md`, plugin metadata, command names, file names, status fields, and script interfaces in English for stable triggering and distribution.
+- Keep generated project-facing instructions in the user's language when the project template is localized. The bundled default project adapter is Chinese.
+- Never translate file names, command names, status values, JSON keys, script flags, or quality-gate decisions.
+- When a user asks in Chinese, explain workbench behavior in Chinese while preserving technical identifiers such as `PROJECT_INTAKE.md`, `PASS_WITH_RISK`, `quality_gate.py`, and `workbench_upgrade_assessment`.
+
 ## Mental Model
 
 The workbench has one simple path. Keep the public path stable even if the internal skills or tools change:
@@ -42,6 +51,44 @@ Use the smallest route that fits:
   read `references/enhancement-packs.md`, then use the relevant specialist skill only when the task clearly requires it.
 
 If an optional specialist skill is missing, continue with the built-in workbench path and tell the user that the specialist enhancement is unavailable. Do not block the workbench setup because a third-party or specialist skill is absent.
+
+## Unified Stage Router
+
+Keep `codex-workbench` as the only public entrypoint. Do not ask the user to choose between intake, product, UX, architecture, testing, or documentation skills before the workbench has routed the task.
+
+When the user gives a project or workbench request, route internally:
+
+| User need | Core workbench route | Required output or stop condition | Optional enhancement, only if installed and clearly useful |
+| --- | --- | --- | --- |
+| Project discovery, vague requirements, changed direction, unclear users/scope/data/permissions/AI boundaries | `scripts/intake.py`, `PROJECT_INTAKE.md`, `assets/PROJECT_INTAKE.template.md` | Confirm project facts or list blocker questions; do not start high-risk implementation while `PROJECT_INTAKE.md` is draft or has open blockers. | `project-intake-preflight`, `ask-questions-if-underspecified` |
+| Product planning, PRD, first-version scope, user stories, acceptance criteria, roadmap | `workbench/product/PRODUCT_BRIEF.md`, `PRD.md`, `ROADMAP.md` | Produce or update product facts, acceptance criteria, non-goals, and version scope before feature work. | `technical-doc-writer`, `project-architect` |
+| UX, prototype, user flow, page states, error/empty/loading/permission states | `workbench/design/UX_SPEC.md`, `PROTOTYPE.md`, `USER_FLOW.md` | Produce user flow, UI states, error/empty/loading behavior, and prototype evidence before user-visible implementation. | `ui-ux-pro-max`, `frontend-design`, `figma`, `figma-use`, `figma-generate-design` |
+| Architecture, data model, API design, AI/tool boundaries, ADR | `workbench/architecture/ARCHITECTURE.md`, `DATA_MODEL.md`, `API_DESIGN.md`, `AI_DESIGN.md`, `adr/` | Produce module, data, API, AI-tool, permission, and rollback boundaries before cross-module or high-risk work. | `project-architect`, `enterprise-ai-app-lifecycle`, `drawio-skill` |
+| Delivery planning, iteration plan, task breakdown, rollback | `workbench/delivery/RELEASE_PLAN.md`, `ITERATION_PLAN.md`, `TASK_BREAKDOWN.md` | Produce iteration scope, task split, validation plan, and rollback notes before scheduling meaningful implementation. | `technical-doc-writer`, `ci-cd-integration` |
+| Feature implementation | `scripts/workbench.py feature`, `workbench/features/<feature-name>/` | Create or update the feature package, resolve open blockers, then implement only the agreed scope. | language/framework/test specialist skills as needed |
+| Verification, review, scorecard, failure loop | `workbench/quality/`, `workbench/runtime/`, `workbench/scorecard/`, `workbench/review/`, `workbench/feedback/` | Run deterministic checks when available, write verification evidence, review risks, and record repeated failures for mechanism upgrades. | review, testing, CI, security, AI eval skills as needed |
+
+Routing rules:
+
+- The user should be able to say only "Use Codex Workbench..." or describe the phase in plain language.
+- The assistant chooses the internal route and reads the necessary project files.
+- If the current phase is unclear, inspect existing workbench files first, then ask the minimum blocker questions.
+- If an enhancement skill is missing, continue with the core workbench artifact and mention the missing enhancement only as optional.
+- Do not expose enhancement skills as setup prerequisites for new users.
+- Do not start implementation while project discovery, product scope, UX/architecture boundaries, or high-risk blockers remain unresolved.
+
+## Execution Contract
+
+For every workbench task, follow this loop:
+
+1. Identify the active project path and current session boundary. If the user says this session is for workbench configuration, do not advance business-project code.
+2. Inspect existing workbench state before choosing a stage: `PROJECT_INTAKE.md`, `AGENTS.md`, `WORKBENCH.md`, `FEATURE_WORKFLOW.md`, `workbench/features/`, `workbench/scorecard/`, and `.workbench-validation/` when present.
+3. Select exactly one primary stage from the router table. Load only the reference files needed for that stage.
+4. State blockers before edits. If users, scope, acceptance, data, permission, AI boundaries, or environment are unclear and materially affect the route, ask the minimum blocker questions.
+5. Produce or update the stage artifact, then validate with the bundled script or project quality gate when available.
+6. Report the next concrete step and any validation gap. Do not claim the workbench is a hard gate unless a script, hook, CI job, test, or quality gate enforces it.
+
+Keep `SKILL.md` lean. Move detailed explanations to `references/`, deterministic behavior to `scripts/`, and reusable files to `assets/`.
 
 ## Decoupling Contract
 

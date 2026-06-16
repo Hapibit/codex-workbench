@@ -40,6 +40,22 @@
 14. 最终回复必须说明改了什么、验证结果、未验证原因和剩余风险。
 15. 如果同类错误重复出现，把它沉淀到规则、测试、lint、CI、hook 或质量门，而不是只在对话里提醒。
 
+## 阶段自检
+
+每次进入实现、规划、审查或继续开发前，先判断当前任务属于哪一层：
+
+| 阶段 | 必读/必产物 | 不能继续的情况 |
+| --- | --- | --- |
+| 项目发现 | `PROJECT_INTAKE.md` | 项目目标、用户、范围、数据、权限、AI 边界或验收仍不清楚。 |
+| 产品规划 | `workbench/product/PRODUCT_BRIEF.md`、`PRD.md`、`ROADMAP.md` | 第一版范围、用户故事、验收标准或非目标缺失。 |
+| UX/原型 | `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` | 用户路径、页面状态、错误/空/加载/权限反馈缺失。 |
+| 架构设计 | `workbench/architecture/` | 模块、数据、API、AI 工具、权限边界或回滚约束缺失。 |
+| 交付计划 | `workbench/delivery/` | 迭代范围、任务拆分、验证计划或依赖不清楚。 |
+| 功能开发 | `workbench/features/<feature-name>/` | `CLARIFY.md` 有 open blocker，或风险等级与验证计划不匹配。 |
+| 验证审查 | `VERIFY.md`、`REVIEW.md`、质量门、`workbench/scorecard/` | 只有口头“已完成”，没有命令、报告、截图、审查或验收证据。 |
+
+判断不清时不要降级处理；先读现有工作台文件，再问最少阻塞问题。
+
 ## 需求不清时
 
 先自行读取仓库能回答的问题；如果仍缺少以下信息，必须问清楚再实现：

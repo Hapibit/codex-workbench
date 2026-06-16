@@ -45,6 +45,34 @@
 
 ## 标准开发流程
 
+用户只需要把需求交给 Codex Workbench，不需要先判断要调用哪个专业 skill。统一入口是：
+
+```text
+Use Codex Workbench to tell me the next step for this project.
+```
+
+工作台内部按阶段路由：
+
+| 用户当前想做什么 | 先看/先产出的文件 | 必须产出或停止条件 | 可选增强能力 |
+| --- | --- | --- | --- |
+| 项目还没讲清楚、需求很散、方向变化 | `PROJECT_INTAKE.md` | 确认目标用户、范围、数据、权限、AI 边界和验收；仍有 open blocker 时停止高风险实现。 | 需求澄清、项目预处理 |
+| 要确定为什么做、第一版做什么、不做什么 | `workbench/product/PRODUCT_BRIEF.md`、`PRD.md`、`ROADMAP.md` | 写清业务目标、成功指标、用户故事、验收标准、非目标和版本范围。 | 产品/技术文档 |
+| 要设计用户路径、页面状态、原型 | `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` | 写清入口、主流程、失败流程、错误/空/加载/权限状态和原型证据。 | UI/UX、Figma、前端设计 |
+| 要确定模块、数据、API、AI、权限边界 | `workbench/architecture/` | 写清模块边界、数据模型、API 合约、AI 工具调用、权限边界、ADR 和回滚约束。 | 架构、企业 AI 生命周期、画图 |
+| 要拆版本、迭代和任务 | `workbench/delivery/` | 写清当前迭代范围、任务拆分、验证计划、依赖和回滚路径。 | CI/CD、技术文档 |
+| 要开始写某个功能 | `workbench/features/<feature-name>/` | 先建立或更新功能包，解决 `CLARIFY.md` open blocker，再实现约定范围。 | 测试、框架、语言专项能力 |
+| 要确认质量或复盘失败 | `workbench/quality/`、`scorecard/`、`review/`、`feedback/` | 运行可用质量门，写验证证据和 review 结论；重复失败进入机制升级判断。 | 测试、CI、安全、AI eval、独立审查 |
+
+如果增强能力不存在，仍然继续走本工作台的核心文件和脚本；增强 skill 不是使用本工作台的前置条件。
+
+每次使用阶段路由后，AI 必须按这个执行契约收尾：
+
+1. 先判断当前阶段和项目状态，不清楚时读取现有工作台文件再问最少阻塞问题。
+2. 说明本次选择的阶段、依据、需要读的文件和不会做的范围。
+3. 更新对应阶段产物；如果阻塞信息缺失，先写入 blocker 或向用户确认，不用猜测替代。
+4. 能验证的运行脚本、质量门、scorecard 或审查；不能验证时写明原因。
+5. 最终回复只给本轮结果、证据位置、验证结果、剩余风险和下一步。
+
 本工作台的完整 0 到 1 流程是：
 
 ```text

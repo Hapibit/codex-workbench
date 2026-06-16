@@ -6,12 +6,34 @@ Use this reference when a task needs capabilities beyond the core project workbe
 
 Keep Codex Workbench as the single public entrypoint. Treat specialist skills as optional enhancement packs.
 
+Do not make users pick specialist skills at the start. The public entrypoint is always:
+
+```text
+Use Codex Workbench ...
+```
+
+Codex Workbench should route the phase internally, then use optional enhancement packs only when they clearly improve the current step.
+
 Do not bundle every specialist workflow into the core skill. Instead:
 
 1. Detect what the task needs.
 2. Prefer the core workbench path for intake, adapter generation, feature packages, quality gates, and review.
 3. Use an installed specialist skill only when it directly improves the current task.
 4. If the specialist skill is missing, continue with the core path and recommend the missing enhancement by category.
+
+## Stage Routing
+
+| Stage | Core artifact | Optional enhancement |
+| --- | --- | --- |
+| Project discovery | `PROJECT_INTAKE.md` | project-intake / clarification skills |
+| Product planning | `workbench/product/` | technical documentation or project architecture skills |
+| UX and prototype | `workbench/design/` | UI/UX, Figma, frontend design skills |
+| Architecture | `workbench/architecture/` | architecture, enterprise AI, diagram skills |
+| Delivery | `workbench/delivery/` | CI/CD or documentation skills |
+| Feature work | `workbench/features/<feature-name>/` | language/framework/test skills |
+| Verification and review | `workbench/quality/`, `scorecard/`, `review/`, `feedback/` | testing, CI, security, AI eval, review skills |
+
+The user should not need to know these skill names. They describe the task; Codex Workbench decides the route.
 
 ## Categories
 

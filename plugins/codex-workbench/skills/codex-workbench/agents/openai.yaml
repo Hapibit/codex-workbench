@@ -1,4 +1,4 @@
 interface:
   display_name: "Codex Workbench"
   short_description: "One entry for project AI workbenches."
-  default_prompt: "Use $codex-workbench to set up or run the project workbench with the lowest-friction flow."
+  default_prompt: "Use $codex-workbench to route this project request, update the right workbench artifacts, and report the next verified step."

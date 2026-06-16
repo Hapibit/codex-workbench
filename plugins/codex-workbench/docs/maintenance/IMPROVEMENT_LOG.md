@@ -32,6 +32,53 @@
 
 ## 记录
 
+### 2026-06-16 - 发布版本提升到 1.1.1，并优化工作台提示词路由
+
+问题：
+
+用户指出工作台提示词需要继续优化，并要求先搜索工作台相关提示词优化资料。实际检查发现，工作台已经有统一入口和阶段路由，但提示词仍有三个风险：阶段路由缺少明确的产物/停止条件；独立审查提示只读少量文件，容易只审代码不审需求和证据；本机同时存在发布插件、插件缓存和兼容 skill 副本，旧副本可能让其他会话读到旧规则。
+
+证据来源：
+
+- 用户反馈：另一个会话曾跳过工作台规则；用户要求工作台提示词既要参考资料，又要真正优化。
+- 官方/外部资料：
+  - OpenAI Codex best practices：重复工作流应该沉淀为 skill，不要依赖长提示词；skill 要有清晰触发描述、输入输出和脚本/资源。
+  - OpenAI Codex customization：skill 采用 progressive disclosure，`SKILL.md` 只在触发后加载，详细资料放 `references/`，确定性能力放 `scripts/`，模板放 `assets/`。
+  - OpenAI prompt engineering coding guidance：编码代理提示词应定义角色、结构化工具使用、测试验证、Markdown 标准、计划和进度跟踪。
+  - Google / Anthropic / Microsoft 提示词资料：清晰说明目标、约束、成功标准、模糊时的处理方式，并通过测试/评估闭环迭代。
+- 本地失败证据：
+  - 个人兼容 skill 副本与发布源/插件缓存不一致，存在读取旧提示词的风险。
+  - `workbench/review/independent-review-prompt.md` 没有要求按影响面读取 `PROJECT_INTAKE.md`、PRD、UX、架构、功能包和 scorecard 证据。
+  - `.codex-plugin/plugin.json` 默认入口缺少创建功能包、验证工作台和预览升级等常用任务。
+
+决策：
+
+将本次改动作为 patch 版本 `1.1.1`。提示词采用“机器入口英文、项目规则中文、技术标识不翻译”的双语分工；在 `SKILL.md` 中加入阶段执行契约；在项目模板中加入阶段自检、产物/停止条件和验证要求；增强独立审查提示，让审查覆盖需求、产品、UX、架构、功能包、质量门、scorecard 和工作台升级判断；同步本机兼容 skill 副本，降低读取旧提示词的风险。
+
+变更文件：
+
+- `.codex-plugin/plugin.json`
+- `README.md`
+- `skills/codex-workbench/SKILL.md`
+- `skills/codex-workbench/agents/openai.yaml`
+- `skills/codex-workbench/assets/project-adapter-template/AGENTS.md`
+- `skills/codex-workbench/assets/project-adapter-template/WORKBENCH.md`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/review/independent-review-prompt.md`
+- `skills/codex-workbench/scripts/workbench.py`
+- 个人工作台路由文件中的 `codex-workbench` 路径说明
+- 个人兼容 skill 副本
+
+验证结果：
+
+- `py .\skills\codex-workbench\scripts\workbench.py self-test`：通过。
+- `py .\skills\codex-workbench\scripts\workbench.py golden-test`：通过。
+- `py .\skills\codex-workbench\scripts\workbench.py package-check --plugin <plugin-root> --expected-version 1.1.1 --write-report`：通过，P0/P1/P2/P3 均为 0。
+
+后续动作：
+
+- 发布 Git tag 时使用 `v1.1.1`。
+- 用真实项目试水时重点观察：AI 是否先判断阶段、是否在需求不清时停下来、是否把 review/quality gate 缺口写入升级判断。
+
 ### 2026-06-15 - 增加证据保留策略，避免日志无限堆积
 
 问题：
