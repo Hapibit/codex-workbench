@@ -1,6 +1,6 @@
 # Codex Workbench
 
-版本：`2.0.0`
+版本：`2.0.1`
 
 Codex Workbench 是给 Codex 使用的 AI 开发工作台插件。它不是一段更长的提示词，也不是让用户背一堆 skill 名称，而是把项目从“聊天驱动”改成“状态机 + 证据链 + 工程门禁”驱动：需求、产品、UX、架构、变更、影响分析、追踪矩阵、验证、审查、质量门和失败学习都落到项目仓库里。
 
@@ -244,7 +244,7 @@ codex plugin add codex-workbench --marketplace hapibit
 默认安装 `main`，也就是仓库当前最新版本。只有复现实验、回滚问题或锁定环境时才建议固定 tag：
 
 ```bash
-codex plugin marketplace add Hapibit/codex-workbench --ref v2.0.0
+codex plugin marketplace add Hapibit/codex-workbench --ref v2.0.1
 codex plugin add codex-workbench --marketplace hapibit
 ```
 
@@ -363,12 +363,12 @@ plugins/codex-workbench/
 ```bash
 python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py self-test
 python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py golden-test
-python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py package-check --plugin plugins/codex-workbench --expected-version 2.0.0 --write-report
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py package-check --plugin plugins/codex-workbench --expected-version 2.0.1 --write-report
 ```
 
 发布候选必须满足：
 
-- `.codex-plugin/plugin.json` 版本是 `2.0.0`。
+- `.codex-plugin/plugin.json` 版本是 `2.0.1`。
 - 只暴露一个可见 skill：`codex-workbench`。
 - 新增模板、schema、runtime、quality、docs 都被打包。
 - `.workbench-validation/`、cache、`__pycache__`、个人路径和内部备份不进入发布包。

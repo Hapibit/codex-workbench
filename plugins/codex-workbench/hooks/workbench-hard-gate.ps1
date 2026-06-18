@@ -594,11 +594,14 @@ function Test-QualityGateFresh {
   return ($markerTime -ge $latestChange)
 }
 
-$hook = Read-HookInput
-if ($null -eq $hook) { exit 0 }
-$event = [string]$hook.hook_event_name
+$event = "unknown"
 
-switch ($event) {
+try {
+  $hook = Read-HookInput
+  if ($null -eq $hook) { exit 0 }
+  $event = [string]$hook.hook_event_name
+
+  switch ($event) {
   "SessionStart" {
     Save-SessionStart -HookInput $hook
     Out-HookJson -Payload @{
@@ -723,6 +726,27 @@ switch ($event) {
     Out-HookJson -Payload @{}
     exit 0
   }
-}
+  }
 
-exit 0
+  exit 0
+} catch {
+  $message = [string]$_.Exception.Message
+  if ([string]::IsNullOrWhiteSpace($message)) {
+    $message = "unknown hook error"
+  }
+  try {
+    Out-HookJson -Payload @{
+      hookSpecificOutput = @{
+        hookEventName = $event
+        additionalContext = "Codex Workbench hook 自身发生异常，已按 fail-closed 处理，避免显示 hook failed。请检查 hook 日志或重新运行 package-check。异常：$message"
+      }
+    }
+  } catch {
+    $fallback = '{"hookSpecificOutput":{"hookEventName":"HookError","additionalContext":"Codex Workbench hook failed before structured JSON output; treat this turn as unverified."}}'
+    $bytes = [Text.Encoding]::UTF8.GetBytes($fallback)
+    $stdout = [Console]::OpenStandardOutput()
+    $stdout.Write($bytes, 0, $bytes.Length)
+    $stdout.Flush()
+  }
+  exit 0
+}

@@ -217,7 +217,7 @@ codex plugin add codex-workbench --marketplace hapibit
 默认安装 `main`，也就是仓库当前最新版本。只有复现实验、回滚问题或锁定环境时才建议固定 tag：
 
 ```bash
-codex plugin marketplace add Hapibit/codex-workbench --ref v2.0.0
+codex plugin marketplace add Hapibit/codex-workbench --ref v2.0.1
 codex plugin add codex-workbench --marketplace hapibit
 ```
 
@@ -311,12 +311,12 @@ python skills/codex-workbench/scripts/check_enhancements.py --query "我要做 U
 ```bash
 python skills/codex-workbench/scripts/workbench.py self-test
 python skills/codex-workbench/scripts/workbench.py golden-test
-python skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 2.0.0 --write-report
+python skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 2.0.1 --write-report
 ```
 
 发布候选必须满足：
 
-- `.codex-plugin/plugin.json` 版本是 `2.0.0`。
+- `.codex-plugin/plugin.json` 版本是 `2.0.1`。
 - 只暴露一个可见 skill：`codex-workbench`。
 - 新增模板、schema、runtime、quality、docs 都被打包。
 - `.workbench-validation/`、cache、`__pycache__`、个人路径和内部备份不进入发布包。

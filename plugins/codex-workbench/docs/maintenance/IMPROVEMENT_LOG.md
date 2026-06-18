@@ -32,6 +32,40 @@
 
 ## 记录
 
+### 2026-06-18 - 修复 hook 异常时显示 UserPromptSubmit hook failed
+
+问题：
+
+用户在使用 2.0.0 插件后看到 `UserPromptSubmit hook (failed) error: hook exited with code 1`。这类报错会让用户误以为是业务请求被拦截，实际含义是 hook 脚本自身异常退出。对于工作台门禁来说，脚本异常不应该裸露成 `hook failed`，而应该返回结构化上下文，让 Codex 继续显示明确原因。
+
+证据来源：
+
+- 用户反馈：用户明确询问 `UserPromptSubmit hook (failed)` 怎么解决。
+- 本地失败证据：
+  - 手动复现正常 `UserPromptSubmit` 输入时，全局 hook 和插件 hook 均返回 `exit=0`。
+  - 构造异常环境变量后，旧逻辑可能因 `$ErrorActionPreference = "Stop"` 直接退出。
+
+决策：
+
+将 hook 顶层执行包进 `try/catch`。正常危险操作仍由 `block`、`deny` 或质量门逻辑处理；未预期异常则输出结构化 `hookSpecificOutput`，提示 hook 自身异常并按 fail-closed 处理，最后 `exit 0`，避免 Codex 显示不可读的 `hook failed`。
+
+变更文件：
+
+- `hooks/workbench-hard-gate.ps1`
+- `.codex-plugin/plugin.json`
+- `README.md`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+
+验证结果：
+
+- 正常 `UserPromptSubmit`：返回结构化 JSON，`exit=0`。
+- 插件缓存 `UserPromptSubmit`：返回结构化 JSON，`exit=0`。
+- 构造异常 `SessionStart`：返回结构化 hook 异常上下文，`exit=0`。
+
+后续动作：
+
+- 作为 patch 版本发布 `2.0.1`，让重新安装插件的用户拿到 fail-closed hook。
+
 ### 2026-06-17 - 发布版本提升到 2.0.0，并按架构设计稿重构工作台为状态机
 
 问题：
