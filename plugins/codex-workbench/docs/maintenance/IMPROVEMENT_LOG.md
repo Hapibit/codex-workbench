@@ -32,6 +32,48 @@
 
 ## 记录
 
+### 2026-06-18 - 修复 Windows hook 命令入口仍可能 code 1
+
+问题：
+
+`2.0.1` 已经把 hook 脚本异常改成 fail-closed JSON 输出，但用户在真实 Codex 会话中仍看到 `SessionStart hook (failed)`、`UserPromptSubmit hook (failed)` 和 `PreToolUse hook (failed)`，错误为 `hook exited with code 1`。
+
+证据来源：
+
+- 用户反馈：用户贴出三个 hook 事件仍然 `exited with code 1`。
+- 本地失败证据：直接执行 `workbench-hard-gate.ps1` 正常返回 JSON，但 `hooks.json` 里的主 `command` 使用 `pwsh`；当前 Windows 环境没有可用 `pwsh`。如果 Codex 实际执行主 `command` 而不是 `commandWindows`，hook 会在进入脚本前失败。
+- 官方资料：OpenAI Codex hooks 文档说明 Codex 会加载 `~/.codex/hooks.json` 和插件 `hooks/hooks.json`，插件 hook 可使用 `PLUGIN_ROOT` / `PLUGIN_DATA`，Windows 可用 `commandWindows` 覆盖命令；`PreToolUse` 应使用 `permissionDecision: "deny"` 表达阻断，而不是依赖脚本异常退出。
+
+决策：
+
+把全局 hook 和插件随包 hook 的 `command` / `commandWindows` 都改成 Windows 稳定入口：
+
+```text
+cmd /c powershell -NoProfile -ExecutionPolicy Bypass -File "%...%\workbench-hard-gate.ps1"
+```
+
+这样环境变量由 `cmd` 展开，脚本由 Windows 自带 `powershell.exe` 执行，不依赖 PowerShell 7 的 `pwsh`。安全语义不变：危险操作仍由 hook 的 `permissionDecision: deny` 或 block 输出处理，不能用异常退出当门禁。
+
+变更文件：
+
+- `hooks/hooks.json`
+- `.codex-plugin/plugin.json`
+- `README.md`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+
+验证结果：
+
+- 全局 `hooks.json` JSON 解析通过。
+- 插件 `hooks/hooks.json` JSON 解析通过。
+- 真实命令入口 `cmd /c powershell ... -File "%USERPROFILE%\.codex\hooks\workbench-hard-gate.ps1"` 测试通过，`SessionStart` 和 `UserPromptSubmit` 均返回结构化 JSON 且退出码为 0。
+- 插件缓存入口 `cmd /c powershell ... -File "%PLUGIN_ROOT%\hooks\workbench-hard-gate.ps1"` 测试通过。
+- `package-check --expected-version 2.0.1` 在修改前通过，P0/P1/P2/P3 均为 0；版本提升后以 `2.0.2` 重新运行。
+
+后续动作：
+
+- 作为 patch 版本发布 `2.0.2`，让重新安装插件的用户拿到稳定 hook 命令入口。
+- 如果后续再出现入口兼容问题，应把 hook 命令模拟测试提升为 `package-check` 的发布前检查。
+
 ### 2026-06-18 - 修复 hook 异常时显示 UserPromptSubmit hook failed
 
 问题：
