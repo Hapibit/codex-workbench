@@ -20,7 +20,7 @@ Use:
 - Minimal clarification conversations when repo evidence cannot answer blocking questions.
 - Optional planning/architecture specialist skills for deep project planning when full specification and implementation docs are needed.
 - Optional enterprise AI lifecycle specialist skills for AI/RAG/Agent projects that need risk, data, eval, security, and release gates.
-- `FEATURE_WORKFLOW.md` and `workbench/features/<feature-name>/` for feature-level SDD after the project image is clear.
+- `FEATURE_WORKFLOW.md` and `workbench/features/<feature-name>/` for 2.0.0 feature work packages after the project image is clear.
 
 ## Required Project Intake Content
 

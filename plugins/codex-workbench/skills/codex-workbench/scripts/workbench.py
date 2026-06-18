@@ -31,6 +31,8 @@ from pathlib import Path
 from typing import Any
 
 
+WORKBENCH_VERSION = "2.0.0"
+
 SKIP_DIRS = {
     ".git",
     ".hg",
@@ -51,6 +53,7 @@ SKIP_DIRS = {
 REQUIRED_ADAPTER_FILES = [
     "AGENTS.md",
     "PROJECT_INTAKE.md",
+    "PROJECT_STATE.md",
     "WORKBENCH.md",
     "REVIEW.md",
     "DEVELOPMENT_FLOW.md",
@@ -67,8 +70,11 @@ REQUIRED_ADAPTER_FILES = [
     "workbench/architecture/API_DESIGN.md",
     "workbench/architecture/AI_DESIGN.md",
     "workbench/architecture/adr/README.md",
-    "workbench/delivery/RELEASE_PLAN.md",
+    "workbench/delivery/CHANGE_LOG.md",
+    "workbench/delivery/TRACEABILITY.md",
     "workbench/delivery/ITERATION_PLAN.md",
+    "workbench/delivery/RELEASE_PLAN.md",
+    "workbench/delivery/RELEASE_CHECKLIST.md",
     "workbench/delivery/TASK_BREAKDOWN.md",
     "workbench/scorecard/RUBRIC.md",
     "workbench/scorecard/SCORECARD.md",
@@ -79,6 +85,8 @@ REQUIRED_ADAPTER_FILES = [
     "workbench/quality/quality_gate.py",
     "workbench/quality/quality-gate.ps1",
     "workbench/quality/quality-gate.sh",
+    "workbench/runtime/WORKFLOW_STATE.schema.json",
+    "workbench/runtime/BYPASS_LOG.md",
     "workbench/runtime/runtime_gate.py",
     "workbench/runtime/runtime-gate.ps1",
     "workbench/runtime/runtime-gate.sh",
@@ -89,31 +97,48 @@ REQUIRED_ADAPTER_FILES = [
     "workbench/feedback/ITERATION_LOG.md",
     "workbench/feedback/AI_EFFECTIVENESS.md",
     "workbench/review/independent-review-prompt.md",
+    "workbench/feature-template/CHANGE_REQUEST.md",
+    "workbench/feature-template/IMPACT_ANALYSIS.md",
     "workbench/feature-template/SPEC.md",
-    "workbench/feature-template/CLARIFY.md",
     "workbench/feature-template/DESIGN.md",
     "workbench/feature-template/PLAN.md",
     "workbench/feature-template/TASKS.md",
     "workbench/feature-template/DECISIONS.md",
     "workbench/feature-template/IMPLEMENTATION_NOTES.md",
-    "workbench/feature-template/CHECKLIST.md",
     "workbench/feature-template/VERIFY.md",
     "workbench/feature-template/REVIEW.md",
     "workbench/feature-template/CHANGELOG.md",
+    "workbench/feature-template/FEATURE_STATUS.schema.json",
 ]
 
-FEATURE_PACKAGE_FILES = [
+FEATURE_TEMPLATE_FILES = [
+    "CHANGE_REQUEST.md",
+    "IMPACT_ANALYSIS.md",
     "SPEC.md",
-    "CLARIFY.md",
     "DESIGN.md",
     "PLAN.md",
     "TASKS.md",
     "DECISIONS.md",
     "IMPLEMENTATION_NOTES.md",
-    "CHECKLIST.md",
     "VERIFY.md",
     "REVIEW.md",
     "CHANGELOG.md",
+    "FEATURE_STATUS.schema.json",
+]
+
+FEATURE_PACKAGE_FILES = [
+    "CHANGE_REQUEST.md",
+    "IMPACT_ANALYSIS.md",
+    "SPEC.md",
+    "DESIGN.md",
+    "PLAN.md",
+    "TASKS.md",
+    "DECISIONS.md",
+    "IMPLEMENTATION_NOTES.md",
+    "VERIFY.md",
+    "REVIEW.md",
+    "CHANGELOG.md",
+    "FEATURE_STATUS.json",
 ]
 
 REQUIRED_ADAPTER_TEXT_BY_FILE = {
@@ -128,8 +153,10 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "PRD.md",
         "UX_SPEC.md",
         "ARCHITECTURE.md",
-        "工作量分级门",
-        "硬触发器",
+        "light",
+        "standard",
+        "strict",
+        "hard triggers",
         "FAILURE_LOG.md",
         "不要提交",
     ],
@@ -139,6 +166,13 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "第一版范围",
         "AI 使用边界",
         "生成下游文件前检查",
+    ],
+    "PROJECT_STATE.md": [
+        "当前事实",
+        "active_feature",
+        "current_stage",
+        "验证命令",
+        "关键约束",
     ],
     "WORKBENCH.md": [
         "quality_gate.py",
@@ -154,8 +188,10 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "ARCHITECTURE.md",
         "ITERATION_LOG.md",
         "AI_EFFECTIVENESS.md",
-        "工作量分级门",
-        "硬触发器",
+        "light",
+        "standard",
+        "strict",
+        "hard triggers",
         "scorecard",
         "证据审计",
         "FAILURE_LOG.md",
@@ -253,11 +289,31 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "验证",
         "回滚",
     ],
+    "workbench/delivery/CHANGE_LOG.md": [
+        "change_id",
+        "scope",
+        "risk",
+        "validation",
+        "gate_marker",
+    ],
+    "workbench/delivery/TRACEABILITY.md": [
+        "追踪矩阵",
+        "来源",
+        "实现位置",
+        "验证位置",
+        "covered",
+    ],
     "workbench/delivery/ITERATION_PLAN.md": [
         "迭代计划",
         "变更",
         "复测结果",
         "下一轮",
+    ],
+    "workbench/delivery/RELEASE_CHECKLIST.md": [
+        "发布检查",
+        "回滚",
+        "质量门",
+        "风险确认",
     ],
     "workbench/delivery/TASK_BREAKDOWN.md": [
         "任务拆分",
@@ -292,24 +348,38 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "参考线调整",
     ],
     "FEATURE_WORKFLOW.md": [
-        "工作量分级门",
-        "硬触发器",
-        "风险打分",
-        "L1 轻量任务",
-        "L2 中等任务",
-        "L3 重量任务",
-        "L4 紧急/重大任务",
+        "状态机",
+        "CHANGE_REQUEST.md",
+        "IMPACT_ANALYSIS.md",
+        "FEATURE_STATUS.json",
+        "light",
+        "standard",
+        "strict",
+        "hard triggers",
+        "影响分析",
         "SPEC.md",
-        "CLARIFY.md",
         "DESIGN.md",
         "PLAN.md",
         "TASKS.md",
         "DECISIONS.md",
         "IMPLEMENTATION_NOTES.md",
-        "CHECKLIST.md",
         "VERIFY.md",
         "REVIEW.md",
         "CHANGELOG.md",
+    ],
+    "workbench/feature-template/CHANGE_REQUEST.md": [
+        "change_id",
+        "目标",
+        "范围",
+        "非目标",
+        "验收标准",
+    ],
+    "workbench/feature-template/IMPACT_ANALYSIS.md": [
+        "影响分析",
+        "PRD",
+        "UX",
+        "API",
+        "TRACEABILITY",
     ],
     "workbench/feature-template/SPEC.md": [
         "用户目标",
@@ -317,13 +387,6 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "范围",
         "approved_for_plan",
         "risk_level",
-        "classification_reason",
-    ],
-    "workbench/feature-template/CLARIFY.md": [
-        "需求澄清",
-        "阻塞",
-        "已确认",
-        "ready_for_plan",
     ],
     "workbench/feature-template/DESIGN.md": [
         "功能设计",
@@ -353,19 +416,13 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "偏离计划",
         "问题",
     ],
-    "workbench/feature-template/CHECKLIST.md": [
-        "阶段门禁",
-        "SPEC",
-        "feature_status",
-        "current_stage",
-        "分级门禁",
-        "VERIFY",
-    ],
     "workbench/feature-template/VERIFY.md": [
         "status",
         "验证命令",
         "验收记录",
         "workbench_upgrade_assessment",
+        "accepted_risk",
+        "deferred_follow_up",
     ],
     "workbench/feature-template/REVIEW.md": [
         "status",
@@ -379,6 +436,12 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
         "需求变化",
         "影响文件",
         "复测",
+    ],
+    "workbench/feature-template/FEATURE_STATUS.schema.json": [
+        "current_stage",
+        "implementation_allowed",
+        "delivery_allowed",
+        "required_artifacts",
     ],
     "workbench/feedback/FAILURE_LOG.md": [
         "证据归档位置",
@@ -452,26 +515,21 @@ PROJECT_FACING_DOC_FILES = [
 
 PROCESS_STATUSES = {"draft", "confirmed"}
 INTAKE_STATUSES = {"draft", "confirmed"}
-FEATURE_STAGE_ORDER = ["spec", "clarify", "design", "plan", "tasks", "implement", "verify", "review", "complete"]
-FEATURE_STAGES = set(FEATURE_STAGE_ORDER)
-FEATURE_STATUSES = {"active", "on_hold", "complete"}
-RISK_LEVELS = {"l1", "l2", "l3", "l4"}
+WORKFLOW_STAGE_ORDER = ["CLASSIFY", "BASELINE_CHECK", "CHANGE", "IMPACT", "ROUTE", "PLAN", "IMPLEMENT", "VERIFY", "REVIEW", "GATE", "LEARN", "DONE", "BLOCKED"]
+WORKFLOW_STAGES = set(WORKFLOW_STAGE_ORDER)
+FEATURE_STATUSES = {"active", "on_hold", "complete", "blocked", "failed", "repeated_issue"}
+WORKFLOW_PROFILES = {"light", "standard", "strict", "unclassified"}
+RISK_LEVELS_V2 = {"light", "standard", "strict", "unclassified"}
 SPEC_STATUSES = {"draft", "approved", "blocked"}
-CLARIFY_STATUSES = {"blocked", "ready", "deferred"}
 DESIGN_STATUSES = {"draft", "approved", "blocked"}
 PLAN_STATUSES = {"draft", "approved", "blocked"}
 TASKS_STATUSES = {"draft", "ready", "blocked"}
 VERIFY_STATUSES = {"missing", "partial", "passed", "failed", "blocked"}
 REVIEW_STATUSES = {"pending", "passed", "failed", "blocked"}
-WORKBENCH_UPGRADE_ASSESSMENTS = {
-    "not_required",
-    "failure_log_updated",
-    "template_update_needed",
-    "quality_gate_update_needed",
-    "review_rule_update_needed",
-    "ci_or_hook_needed",
-    "deferred_with_reason",
-}
+FEATURE_VERIFICATION_STATUSES = {"not_run", "partial", "passed", "failed", "blocked"}
+FEATURE_REVIEW_STATUSES = {"not_reviewed", "passed", "failed", "blocked"}
+FEATURE_GATE_STATUSES = {"not_run", "passed", "failed", "stale"}
+WORKBENCH_UPGRADE_ASSESSMENTS = {"required", "deferred", "not_required"}
 RECIPIENT_SETUP_ITEMS = [
     "Codex installation and login",
     "Recipient-owned Codex config",
@@ -549,6 +607,9 @@ PACKAGING_MANIFEST_REQUIRED_INCLUDES = [
     ".codex-plugin/plugin.json",
     "README.md",
     "hooks/**",
+    "docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md",
+    "docs/WORKFLOW_AND_SCORECARD.md",
+    "docs/ITERATION_UPGRADE.md",
     "docs/USER_WORKBENCH.md",
     "skills/codex-workbench/**",
     "docs/maintenance/**",
@@ -1090,10 +1151,12 @@ def generate_quality_gate_py(commands: list[dict[str, Any]]) -> str:
     command_json = quote_json(commands)
     feature_files_json = quote_json(FEATURE_PACKAGE_FILES)
     allowed_dirs_json = quote_json(sorted(ALLOWED_WORKBENCH_TOP_LEVEL_DIRS))
+    version_json = json.dumps(WORKBENCH_VERSION)
     return f'''#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -1105,10 +1168,62 @@ from pathlib import Path
 COMMANDS = {command_json}
 FEATURE_PACKAGE_FILES = {feature_files_json}
 ALLOWED_WORKBENCH_TOP_LEVEL_DIRS = set({allowed_dirs_json})
+WORKBENCH_VERSION = {version_json}
+WORKFLOW_STAGES = ["CLASSIFY", "BASELINE_CHECK", "CHANGE", "IMPACT", "ROUTE", "PLAN", "IMPLEMENT", "VERIFY", "REVIEW", "GATE", "LEARN", "DONE", "BLOCKED"]
+WORKFLOW_PROFILES = {{"light", "standard", "strict", "unclassified"}}
+FEATURE_STATUSES = {{"active", "on_hold", "complete", "blocked", "failed", "repeated_issue"}}
+WORKBENCH_UPGRADE_ASSESSMENTS = {{"required", "deferred", "not_required"}}
 
 
 def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def rel_to(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(path.resolve())
+
+
+def read_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {{}}
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(path.read_bytes())
+    return "sha256:" + digest.hexdigest()
+
+
+def command_output(root: Path, command: list[str]) -> str:
+    try:
+        result = subprocess.run(command, cwd=str(root), text=True, capture_output=True, timeout=20)
+    except Exception:
+        return ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
+
+
+def git_head(root: Path) -> str:
+    return command_output(root, ["git", "rev-parse", "HEAD"]) or "unavailable"
+
+
+def diff_hash(root: Path) -> str:
+    try:
+        result = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=str(root), capture_output=True, timeout=30)
+        payload = result.stdout if result.returncode == 0 else b""
+    except Exception:
+        payload = b""
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
 def run_scorecard(root: Path, profile: str) -> None:
@@ -1193,16 +1308,16 @@ def is_placeholder_value(value: str | None) -> bool:
     return value is None or value.strip().lower() in {{"", "unclassified", "待填写", "todo", "tbd"}}
 
 
-def current_stage_index(stage: str) -> int:
+def workflow_stage_index(stage: str) -> int:
     try:
-        return ["spec", "clarify", "design", "plan", "tasks", "implement", "verify", "review", "complete"].index(stage)
+        return WORKFLOW_STAGES.index(stage.upper())
     except ValueError:
         return -1
 
 
 def stage_reached(current_stage: str, expected_stage: str) -> bool:
-    current = current_stage_index(current_stage)
-    expected = current_stage_index(expected_stage)
+    current = workflow_stage_index(current_stage)
+    expected = workflow_stage_index(expected_stage)
     return current >= expected and expected >= 0
 
 
@@ -1231,53 +1346,59 @@ def check_feature_packages(root: Path) -> list[str]:
         missing = [rel for rel in FEATURE_PACKAGE_FILES if not (package / rel).exists()]
         if missing:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is missing files: {{', '.join(missing)}}")
-        checklist_text = read_text(package / "CHECKLIST.md")
-        feature_status = (read_field(checklist_text, "feature_status") or "active").lower()
-        current_stage = (read_field(checklist_text, "current_stage") or "unknown").lower()
-        if feature_status not in {{"active", "on_hold", "complete"}}:
+        status_json = read_json(package / "FEATURE_STATUS.json")
+        if status_json.get("schema") != "codex-workbench-feature-status/v2":
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has missing or invalid FEATURE_STATUS.json schema")
+        feature_status = str(status_json.get("feature_status") or "active").lower()
+        current_stage = str(status_json.get("current_stage") or "CHANGE").upper()
+        workflow_profile = str(status_json.get("workflow_profile") or "unclassified").lower()
+        required_artifacts = status_json.get("required_artifacts") if isinstance(status_json.get("required_artifacts"), list) else []
+        missing_required_artifacts = [rel for rel in FEATURE_PACKAGE_FILES if rel != "FEATURE_STATUS.json" and rel not in required_artifacts]
+        if missing_required_artifacts:
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} FEATURE_STATUS.json is missing required_artifacts: {{', '.join(missing_required_artifacts)}}")
+        if feature_status not in FEATURE_STATUSES:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid feature_status: {{feature_status}}")
-        if current_stage not in {{"spec", "clarify", "design", "plan", "tasks", "implement", "verify", "review", "complete"}}:
+        if current_stage not in set(WORKFLOW_STAGES):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid current_stage: {{current_stage}}")
+        if workflow_profile not in WORKFLOW_PROFILES:
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid workflow_profile: {{workflow_profile}}")
         if feature_status == "on_hold":
             checked.append(str(package.relative_to(root)) + " (on_hold)")
             continue
 
+        change_text = read_text(package / "CHANGE_REQUEST.md")
+        impact_text = read_text(package / "IMPACT_ANALYSIS.md")
         spec_text = read_text(package / "SPEC.md")
-        clarify_text = read_text(package / "CLARIFY.md")
         design_text = read_text(package / "DESIGN.md")
         plan_text = read_text(package / "PLAN.md")
         tasks_text = read_text(package / "TASKS.md")
+        verify_text = read_text(package / "VERIFY.md")
+        review_text = read_text(package / "REVIEW.md")
+        change_status = (read_field(change_text, "status") or "draft").lower()
+        impact_status = (read_field(impact_text, "status") or "draft").lower()
         spec_status = require_feature_status(package, "SPEC.md", {{"draft", "approved", "blocked"}})
-        clarify_status = require_feature_status(package, "CLARIFY.md", {{"blocked", "ready", "deferred"}})
         design_status = require_feature_status(package, "DESIGN.md", {{"draft", "approved", "blocked"}})
         plan_status = require_feature_status(package, "PLAN.md", {{"draft", "approved", "blocked"}})
         tasks_status = require_feature_status(package, "TASKS.md", {{"draft", "ready", "blocked"}})
         verify_status = require_feature_status(package, "VERIFY.md", {{"missing", "partial", "passed", "failed", "blocked"}})
         review_status = require_feature_status(package, "REVIEW.md", {{"pending", "passed", "failed", "blocked"}})
-        review_text = read_text(package / "REVIEW.md")
         workbench_upgrade_assessment = (read_field(review_text, "workbench_upgrade_assessment") or "unassessed").lower()
-        accepted_upgrade_assessments = {{
-            "not_required",
-            "failure_log_updated",
-            "template_update_needed",
-            "quality_gate_update_needed",
-            "review_rule_update_needed",
-            "ci_or_hook_needed",
-            "deferred_with_reason",
-        }}
-        if workbench_upgrade_assessment == "unassessed" and (verify_status in {{"failed", "blocked"}} or review_status in {{"failed", "blocked"}} or current_stage == "complete" or feature_status == "complete"):
+        if workbench_upgrade_assessment == "unassessed" and (verify_status in {{"failed", "blocked"}} or review_status in {{"failed", "blocked"}} or current_stage == "DONE" or feature_status in {{"complete", "failed", "blocked", "repeated_issue"}}):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} must set REVIEW.md workbench_upgrade_assessment before passing quality gate")
-        if workbench_upgrade_assessment != "unassessed" and workbench_upgrade_assessment not in accepted_upgrade_assessments:
+        if workbench_upgrade_assessment != "unassessed" and workbench_upgrade_assessment not in WORKBENCH_UPGRADE_ASSESSMENTS:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid workbench_upgrade_assessment: {{workbench_upgrade_assessment}}")
         risk_level = (read_field(spec_text, "risk_level") or "unclassified").lower()
+        spec_profile = (read_field(spec_text, "workflow_profile") or "unclassified").lower()
         impact_score = read_int(spec_text, "impact_score")
         uncertainty_score = read_int(spec_text, "uncertainty_score")
         rollback_score = read_int(spec_text, "rollback_score")
         risk_score = read_int(spec_text, "risk_score")
         hard_triggers = read_field(spec_text, "hard_triggers")
         classification_reason = read_field(spec_text, "classification_reason")
-        if risk_level not in {{"l1", "l2", "l3", "l4"}}:
+        if risk_level not in WORKFLOW_PROFILES:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid risk_level: {{risk_level}}")
+        if spec_profile not in WORKFLOW_PROFILES:
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid SPEC.md workflow_profile: {{spec_profile}}")
         component_scores = [impact_score, uncertainty_score, rollback_score]
         if any(score is None or score < 0 or score > 3 for score in component_scores):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid impact/uncertainty/rollback risk scores")
@@ -1287,43 +1408,92 @@ def check_feature_packages(root: Path) -> list[str]:
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} risk_score must equal impact_score + uncertainty_score + rollback_score")
         if is_placeholder_value(hard_triggers) or is_placeholder_value(classification_reason):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is missing risk classification evidence in SPEC.md")
-        if risk_score >= 6 and risk_level in {{"l1", "l2"}}:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} risk_level is too low for risk_score >= 6")
-        if risk_score >= 3 and risk_level == "l1":
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} risk_level is too low for risk_score >= 3")
-        if stage_reached(current_stage, "plan") and (spec_status != "approved" or not read_bool(spec_text, "approved_for_plan")):
+        if risk_score >= 6 and workflow_profile != "strict":
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} workflow_profile is too low for risk_score >= 6")
+        if risk_score >= 3 and workflow_profile == "light":
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} workflow_profile is too low for risk_score >= 3")
+        if stage_reached(current_stage, "PLAN") and change_status not in {{"ready", "approved"}}:
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before CHANGE_REQUEST.md was ready")
+        if stage_reached(current_stage, "PLAN") and impact_status not in {{"ready", "approved"}}:
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before IMPACT_ANALYSIS.md was ready")
+        if stage_reached(current_stage, "PLAN") and (spec_status != "approved" or not read_bool(spec_text, "approved_for_plan")):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before SPEC was approved")
-        if stage_reached(current_stage, "plan") and (clarify_status not in {{"ready", "deferred"}} or not read_bool(clarify_text, "ready_for_plan")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before CLARIFY was ready")
-        if stage_reached(current_stage, "plan") and (design_status != "approved" or not read_bool(design_text, "approved_for_plan")):
+        if stage_reached(current_stage, "PLAN") and (design_status != "approved" or not read_bool(design_text, "approved_for_plan")):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before DESIGN was approved")
-        if stage_reached(current_stage, "tasks") and (plan_status != "approved" or not read_bool(plan_text, "approved_for_tasks")):
+        if stage_reached(current_stage, "IMPLEMENT") and (plan_status != "approved" or not read_bool(plan_text, "approved_for_tasks")):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached TASKS before PLAN was approved for tasks")
-        if stage_reached(current_stage, "implement") and (not read_bool(plan_text, "approved_for_implementation") or tasks_status != "ready" or not read_bool(tasks_text, "ready_for_implementation")):
+        if stage_reached(current_stage, "IMPLEMENT") and (not read_bool(plan_text, "approved_for_implementation") or tasks_status != "ready" or not read_bool(tasks_text, "ready_for_implementation")):
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached IMPLEMENT before PLAN/TASKS allowed implementation")
-        if stage_reached(current_stage, "review") and verify_status != "passed":
+        if stage_reached(current_stage, "REVIEW") and verify_status != "passed":
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached REVIEW before VERIFY passed")
-        if current_stage == "complete" and review_status != "passed":
+        if current_stage == "DONE" and review_status != "passed":
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached complete before REVIEW passed")
-
-        if re.search(r"(?im)^\\|\\s*C\\d+\\s*\\|.*\\|\\s*open\\s*\\|\\s*$", clarify_text):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} still has open blocking clarification items in CLARIFY.md")
         if feature_status != "complete":
             raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is {{feature_status}}. Set feature_status to on_hold for paused work, or complete it before passing the final quality gate.")
+        if bool(status_json.get("implementation_allowed")) and (not read_bool(plan_text, "approved_for_implementation") or not read_bool(tasks_text, "ready_for_implementation")):
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} FEATURE_STATUS.json allows implementation before PLAN/TASKS allow it")
+        if bool(status_json.get("delivery_allowed")) and (verify_status != "passed" or review_status != "passed"):
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} FEATURE_STATUS.json allows delivery before VERIFY/REVIEW pass")
         require_feature_field(package, "SPEC.md", "approved_for_plan", True)
-        require_feature_field(package, "CLARIFY.md", "ready_for_plan", True)
         require_feature_field(package, "DESIGN.md", "approved_for_plan", True)
         require_feature_field(package, "PLAN.md", "approved_for_tasks", True)
         require_feature_field(package, "PLAN.md", "approved_for_implementation", True)
         require_feature_field(package, "TASKS.md", "ready_for_implementation", True)
         require_feature_field(package, "VERIFY.md", "status", "passed")
         require_feature_field(package, "REVIEW.md", "status", "passed")
-        if not read_bool(checklist_text, "implementation_allowed") or not read_bool(checklist_text, "delivery_allowed"):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is complete but CHECKLIST.md has not allowed implementation and delivery")
-        if re.search(r"(?m)^- \\[ \\]", checklist_text) or re.search(r"(?m)^- \\[ \\]", read_text(package / "TASKS.md")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} still has unchecked checklist or task items")
+        if not bool(status_json.get("implementation_allowed")) or not bool(status_json.get("delivery_allowed")):
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is complete but FEATURE_STATUS.json has not allowed implementation and delivery")
+        if re.search(r"(?m)^- \\[ \\]", tasks_text):
+            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} still has unchecked task items")
+        if workflow_profile == "strict" and "accepted_risk" in verify_text and "false" in verify_text.lower() and "无法验证" in verify_text:
+            raise SystemExit(f"[quality] strict feature {{package.relative_to(root)}} has unaccepted verification risk")
         checked.append(str(package.relative_to(root)))
     return checked
+
+
+def generate_workflow_state(root: Path, active_feature: str | None, current_stage: str, profile: str, checks_run: list[str]) -> dict:
+    source_hashes = {{}}
+    for rel in [
+        "PROJECT_INTAKE.md",
+        "PROJECT_STATE.md",
+        "workbench/delivery/TRACEABILITY.md",
+        "workbench/delivery/CHANGE_LOG.md",
+    ]:
+        path = root / rel
+        if path.exists():
+            source_hashes[rel] = file_sha256(path)
+    return {{
+        "schema": "codex-workbench-workflow-state/v2",
+        "workbench_version": WORKBENCH_VERSION,
+        "generated_by": "quality_gate.py",
+        "created_at": utc_now(),
+        "project_root": str(root),
+        "git_head": git_head(root),
+        "diff_hash": diff_hash(root),
+        "active_feature": active_feature,
+        "current_stage": current_stage,
+        "workflow_profile": profile,
+        "implementation_allowed": False,
+        "delivery_allowed": False,
+        "source_hashes": source_hashes,
+        "last_gate_status": "passed",
+        "branch_protection": "unverified",
+        "unverified_paths": ["branch_protection"],
+        "checks_run": checks_run,
+    }}
+
+
+def stale_marker_reason(root: Path) -> str | None:
+    marker = root / ".workbench-validation" / "quality-gate-ok.json"
+    if not marker.exists():
+        return None
+    data = read_json(marker)
+    if not data:
+        return "marker is not valid json"
+    current_diff = diff_hash(root)
+    if data.get("diff_hash") and data.get("diff_hash") != current_diff:
+        return "diff_hash changed since last quality gate"
+    return None
 
 
 def main() -> int:
@@ -1349,10 +1519,14 @@ def main() -> int:
     for checked_contract in check_directory_contract(root):
         print(f"[quality] checked {{checked_contract}}")
         checks_run.append(checked_contract)
+    marker_reason = stale_marker_reason(root)
+    if marker_reason:
+        print(f"[quality] previous marker is stale: {{marker_reason}}")
+        checks_run.append("stale marker invalidated")
     checked_features = check_feature_packages(root)
     if checked_features:
-        print(f"[quality] checked SDD feature packages: {{', '.join(checked_features)}}")
-        checks_run.append("sdd feature package structure")
+        print(f"[quality] checked 2.0 feature packages: {{', '.join(checked_features)}}")
+        checks_run.append("2.0 feature package structure")
     if not selected and not args.allow_empty:
         raise SystemExit(f"[quality] no checks configured for profile {{args.profile}}. Update workbench/quality/quality_gate.py or pass --allow-empty only for docs-only projects.")
     for step in selected:
@@ -1363,15 +1537,29 @@ def main() -> int:
 
     marker_dir = root / ".workbench-validation"
     marker_dir.mkdir(parents=True, exist_ok=True)
+    active_feature = checked_features[0] if len(checked_features) == 1 else None
+    workflow_state = generate_workflow_state(root, active_feature, "GATE", args.profile, checks_run)
+    workflow_state_path = marker_dir / "workflow-state.json"
+    workflow_state_path.write_text(json.dumps(workflow_state, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
     marker = marker_dir / "quality-gate-ok.json"
     marker.write_text(json.dumps({{
+        "schema": "codex-workbench-quality-gate-marker/v2",
+        "workbench_version": WORKBENCH_VERSION,
         "gate": "quality-gate",
         "status": "passed",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "created_at": utc_now(),
         "projectRoot": str(root),
+        "git_head": workflow_state["git_head"],
+        "diff_hash": workflow_state["diff_hash"],
+        "feature_id": active_feature,
         "profile": args.profile,
-        "checksRun": checks_run,
+        "commands_run": [step["name"] for step in selected],
+        "checks_run": checks_run,
+        "report_id": "qg-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
+        "workflow_state": str(workflow_state_path),
+        "branch_protection": "unverified",
     }}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    print(f"[quality] wrote {{workflow_state_path}}")
     print(f"[quality] wrote {{marker}}")
     return 0
 
@@ -1660,19 +1848,28 @@ def score_features(root: Path) -> dict:
             blockers.append(f"{rel_package} missing files: {', '.join(missing)}")
             package_scores.append(0)
             continue
-        checklist = read_text(package / "CHECKLIST.md")
-        feature_status = (field(checklist, "feature_status") or "active").lower()
+        status_data = {}
+        try:
+            status_data = json.loads(read_text(package / "FEATURE_STATUS.json"))
+        except Exception:
+            blockers.append(f"{rel_package} FEATURE_STATUS.json is not valid json")
+            package_scores.append(0)
+            continue
+        feature_status = str(status_data.get("feature_status") or "active").lower()
+        current_stage = str(status_data.get("current_stage") or "CHANGE").upper()
         if feature_status == "on_hold":
             package_scores.append(12)
             continue
         if feature_status != "complete":
-            warnings.append(f"{rel_package} is {feature_status}")
+            warnings.append(f"{rel_package} is {feature_status} at {current_stage}")
             package_scores.append(8)
             continue
-        if not has_unchecked_item(package / "CHECKLIST.md") and not has_unchecked_item(package / "TASKS.md"):
+        verify_status = (field(read_text(package / "VERIFY.md"), "status") or "missing").lower()
+        review_status = (field(read_text(package / "REVIEW.md"), "status") or "pending").lower()
+        if verify_status == "passed" and review_status == "passed" and not has_unchecked_item(package / "TASKS.md") and bool(status_data.get("delivery_allowed")):
             package_scores.append(20)
         else:
-            blockers.append(f"{rel_package} complete but still has unchecked tasks or gates")
+            blockers.append(f"{rel_package} complete but VERIFY/REVIEW/status gates are not consistent")
             package_scores.append(12)
     score = min(package_scores) if package_scores else 8
     return component_result("features", score, WEIGHTS["features"], blockers, warnings)
@@ -1983,19 +2180,100 @@ exit 127
 
 
 def generate_runtime_gate_py() -> str:
-    return '''#!/usr/bin/env python3
+    version_json = json.dumps(WORKBENCH_VERSION)
+    return f'''#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
 import urllib.request
+
+WORKBENCH_VERSION = {version_json}
+WORKFLOW_STAGES = ["CLASSIFY", "BASELINE_CHECK", "CHANGE", "IMPACT", "ROUTE", "PLAN", "IMPLEMENT", "VERIFY", "REVIEW", "GATE", "LEARN", "DONE", "BLOCKED"]
+WORKFLOW_PROFILES = ["light", "standard", "strict", "unclassified"]
+
+
+def project_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def command_output(root: Path, command: list[str]) -> str:
+    try:
+        result = subprocess.run(command, cwd=str(root), text=True, capture_output=True, timeout=20)
+    except Exception:
+        return ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
+
+
+def git_head(root: Path) -> str:
+    return command_output(root, ["git", "rev-parse", "HEAD"]) or "unavailable"
+
+
+def diff_hash(root: Path) -> str:
+    try:
+        result = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=str(root), capture_output=True, timeout=30)
+        payload = result.stdout if result.returncode == 0 else b""
+    except Exception:
+        payload = b""
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    digest.update(path.read_bytes())
+    return "sha256:" + digest.hexdigest()
+
+
+def read_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {{}}
+
+
+def generate_workflow_state(root: Path, stage: str, profile: str, active_feature: str | None) -> dict:
+    source_hashes = {{}}
+    for rel in [
+        "PROJECT_INTAKE.md",
+        "PROJECT_STATE.md",
+        "workbench/delivery/TRACEABILITY.md",
+        "workbench/delivery/CHANGE_LOG.md",
+    ]:
+        path = root / rel
+        if path.exists():
+            source_hashes[rel] = file_sha256(path)
+    return {{
+        "schema": "codex-workbench-workflow-state/v2",
+        "workbench_version": WORKBENCH_VERSION,
+        "generated_by": "runtime_gate.py",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "project_root": str(root),
+        "git_head": git_head(root),
+        "diff_hash": diff_hash(root),
+        "active_feature": active_feature,
+        "current_stage": stage,
+        "workflow_profile": profile,
+        "implementation_allowed": stage == "IMPLEMENT",
+        "delivery_allowed": stage == "DONE",
+        "source_hashes": source_hashes,
+        "last_gate_status": "unknown",
+        "branch_protection": "unverified",
+        "unverified_paths": ["branch_protection"],
+    }}
 
 
 def check_url(url: str, name: str) -> None:
     with urllib.request.urlopen(url, timeout=10) as response:
         status = getattr(response, "status", 200)
         if status >= 400:
-            raise SystemExit(f"[runtime] {name} returned HTTP {status}: {url}")
-        print(f"[runtime] {name} ok: HTTP {status} {url}")
+            raise SystemExit(f"[runtime] {{name}} returned HTTP {{status}}: {{url}}")
+        print(f"[runtime] {{name}} ok: HTTP {{status}} {{url}}")
 
 
 def main() -> int:
@@ -2003,14 +2281,26 @@ def main() -> int:
     parser.add_argument("--apply", action="store_true", help="Run checks. Without this flag, print the plan only.")
     parser.add_argument("--frontend-url", default="")
     parser.add_argument("--backend-health-url", default="")
+    parser.add_argument("--stage", choices=WORKFLOW_STAGES, default="CLASSIFY")
+    parser.add_argument("--profile", choices=WORKFLOW_PROFILES, default="unclassified")
+    parser.add_argument("--active-feature", default="")
+    parser.add_argument("--write-state", action="store_true", help="Write .workbench-validation/workflow-state.json.")
     args = parser.parse_args()
 
+    root = project_root()
     print("[runtime] dry-run by default. Pass --apply to run URL smoke checks.")
+    if args.write_state:
+        state = generate_workflow_state(root, args.stage, args.profile, args.active_feature or None)
+        report_dir = root / ".workbench-validation"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        target = report_dir / "workflow-state.json"
+        target.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+        print(f"[runtime] wrote {{target}}")
     if not args.apply:
         if args.frontend_url:
-            print(f"[runtime] planned frontend check: {args.frontend_url}")
+            print(f"[runtime] planned frontend check: {{args.frontend_url}}")
         if args.backend_health_url:
-            print(f"[runtime] planned backend health check: {args.backend_health_url}")
+            print(f"[runtime] planned backend health check: {{args.backend_health_url}}")
         if not args.frontend_url and not args.backend_health_url:
             print("[runtime] no URLs configured. Provide --frontend-url or --backend-health-url.")
         return 0
@@ -2073,7 +2363,7 @@ def generate_review_prompt(project_name: str) -> str:
 - 产品或验收变化：`workbench/product/PRODUCT_BRIEF.md`、`workbench/product/PRD.md`、`workbench/product/ROADMAP.md`
 - 用户可见流程或 UI 变化：`workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md`
 - 模块、数据、API、AI 工具或权限变化：`workbench/architecture/`
-- 当前功能包：`workbench/features/<feature-name>/SPEC.md`、`CLARIFY.md`、`DESIGN.md`、`PLAN.md`、`TASKS.md`、`VERIFY.md`、`REVIEW.md`
+- 当前功能包：`workbench/features/<feature-name>/CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md`、`SPEC.md`、`DESIGN.md`、`PLAN.md`、`TASKS.md`、`VERIFY.md`、`REVIEW.md`、`FEATURE_STATUS.json`
 - 质量和证据审计：`.workbench-validation/`、`workbench/scorecard/SCORECARD.md`、`workbench/scorecard/CALIBRATION.md`
 
 然后检查当前 diff 或用户明确指定的文件。
@@ -2094,7 +2384,7 @@ def generate_review_prompt(project_name: str) -> str:
 
 - 未发现 P0/P1 问题时，明确写“未发现 P0/P1 问题”。
 - 列出验证缺口和仍需人工确认的业务/产品/架构判断。
-- 给出 `workbench_upgrade_assessment` 建议：`not_required`、`failure_log_updated`、`template_update_needed`、`quality_gate_update_needed`、`review_rule_update_needed`、`ci_or_hook_needed` 或 `deferred_with_reason`。
+- 给出 `workbench_upgrade_assessment` 建议：`required`、`deferred` 或 `not_required`。
 """
 
 
@@ -2178,9 +2468,10 @@ def install_user_workbench(codex_home: str | None, apply: bool, force: bool) -> 
 
 def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]:
     variables = template_variables(name, inspection)
-    return {
+    files = {
         "AGENTS.md": render_template("AGENTS.md", variables, generate_agents_md(name, inspection)),
         "PROJECT_INTAKE.md": render_template("PROJECT_INTAKE.md", variables, ""),
+        "PROJECT_STATE.md": render_template("PROJECT_STATE.md", variables, ""),
         "WORKBENCH.md": render_template("WORKBENCH.md", variables, generate_workbench_md(name, inspection)),
         "REVIEW.md": render_template("REVIEW.md", variables, generate_review_md(name)),
         "DEVELOPMENT_FLOW.md": render_template("DEVELOPMENT_FLOW.md", variables, generate_development_flow_md(name, inspection)),
@@ -2197,8 +2488,11 @@ def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]
         "workbench/architecture/API_DESIGN.md": render_template("workbench/architecture/API_DESIGN.md", variables, ""),
         "workbench/architecture/AI_DESIGN.md": render_template("workbench/architecture/AI_DESIGN.md", variables, ""),
         "workbench/architecture/adr/README.md": render_template("workbench/architecture/adr/README.md", variables, ""),
+        "workbench/delivery/CHANGE_LOG.md": render_template("workbench/delivery/CHANGE_LOG.md", variables, ""),
+        "workbench/delivery/TRACEABILITY.md": render_template("workbench/delivery/TRACEABILITY.md", variables, ""),
         "workbench/delivery/RELEASE_PLAN.md": render_template("workbench/delivery/RELEASE_PLAN.md", variables, ""),
         "workbench/delivery/ITERATION_PLAN.md": render_template("workbench/delivery/ITERATION_PLAN.md", variables, ""),
+        "workbench/delivery/RELEASE_CHECKLIST.md": render_template("workbench/delivery/RELEASE_CHECKLIST.md", variables, ""),
         "workbench/delivery/TASK_BREAKDOWN.md": render_template("workbench/delivery/TASK_BREAKDOWN.md", variables, ""),
         "workbench/scorecard/RUBRIC.md": render_template("workbench/scorecard/RUBRIC.md", variables, ""),
         "workbench/scorecard/SCORECARD.md": render_template("workbench/scorecard/SCORECARD.md", variables, ""),
@@ -2209,6 +2503,8 @@ def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]
         "workbench/quality/quality_gate.py": generate_quality_gate_py(inspection["qualityCommands"]),
         "workbench/quality/quality-gate.ps1": generate_py_wrapper("quality_gate.py"),
         "workbench/quality/quality-gate.sh": generate_sh_wrapper("quality_gate.py"),
+        "workbench/runtime/WORKFLOW_STATE.schema.json": render_template("workbench/runtime/WORKFLOW_STATE.schema.json", variables, ""),
+        "workbench/runtime/BYPASS_LOG.md": render_template("workbench/runtime/BYPASS_LOG.md", variables, ""),
         "workbench/runtime/runtime_gate.py": generate_runtime_gate_py(),
         "workbench/runtime/runtime-gate.ps1": generate_py_wrapper("runtime_gate.py"),
         "workbench/runtime/runtime-gate.sh": generate_sh_wrapper("runtime_gate.py"),
@@ -2223,18 +2519,11 @@ def build_adapter_files(name: str, inspection: dict[str, Any]) -> dict[str, str]
             variables,
             generate_review_prompt(name),
         ),
-        "workbench/feature-template/SPEC.md": render_template("workbench/feature-template/SPEC.md", variables, ""),
-        "workbench/feature-template/CLARIFY.md": render_template("workbench/feature-template/CLARIFY.md", variables, ""),
-        "workbench/feature-template/DESIGN.md": render_template("workbench/feature-template/DESIGN.md", variables, ""),
-        "workbench/feature-template/PLAN.md": render_template("workbench/feature-template/PLAN.md", variables, ""),
-        "workbench/feature-template/TASKS.md": render_template("workbench/feature-template/TASKS.md", variables, ""),
-        "workbench/feature-template/DECISIONS.md": render_template("workbench/feature-template/DECISIONS.md", variables, ""),
-        "workbench/feature-template/IMPLEMENTATION_NOTES.md": render_template("workbench/feature-template/IMPLEMENTATION_NOTES.md", variables, ""),
-        "workbench/feature-template/CHECKLIST.md": render_template("workbench/feature-template/CHECKLIST.md", variables, ""),
-        "workbench/feature-template/VERIFY.md": render_template("workbench/feature-template/VERIFY.md", variables, ""),
-        "workbench/feature-template/REVIEW.md": render_template("workbench/feature-template/REVIEW.md", variables, ""),
-        "workbench/feature-template/CHANGELOG.md": render_template("workbench/feature-template/CHANGELOG.md", variables, ""),
     }
+    for filename in FEATURE_TEMPLATE_FILES:
+        rel = f"workbench/feature-template/{filename}"
+        files[rel] = render_template(rel, variables, "")
+    return files
 
 
 def generate_adapter(project: Path, name: str, force: bool, dry_run: bool) -> dict[str, Any]:
@@ -2328,6 +2617,26 @@ def feature_action_for(rel: str, path: Path, force: bool) -> str:
     return "replace-existing" if force else "keep-existing"
 
 
+def initial_feature_status(feature_id: str, profile: str = "unclassified") -> dict[str, Any]:
+    required_artifacts = [filename for filename in FEATURE_PACKAGE_FILES if filename != "FEATURE_STATUS.json"]
+    return {
+        "schema": "codex-workbench-feature-status/v2",
+        "feature_id": feature_id,
+        "feature_status": "active",
+        "risk_level": profile,
+        "workflow_profile": profile,
+        "current_stage": "CHANGE",
+        "implementation_allowed": False,
+        "delivery_allowed": False,
+        "required_artifacts": required_artifacts,
+        "verification_status": "not_run",
+        "review_status": "not_reviewed",
+        "gate_status": "not_run",
+        "workbench_upgrade_assessment": "unassessed",
+        "source_hashes": {},
+    }
+
+
 def create_feature_package(project: Path, name: str, dry_run: bool, force: bool) -> dict[str, Any]:
     inspection = inspect_project(project)
     variables = template_variables(project.name, inspection)
@@ -2335,9 +2644,12 @@ def create_feature_package(project: Path, name: str, dry_run: bool, force: bool)
     target_root = project / "workbench" / "features" / slug
     actions: dict[str, dict[str, str]] = {}
     for filename in FEATURE_PACKAGE_FILES:
-        rel_template = f"workbench/feature-template/{filename}"
         rel_target = f"workbench/features/{slug}/{filename}"
-        content = render_template(rel_template, variables, "")
+        if filename == "FEATURE_STATUS.json":
+            content = json.dumps(initial_feature_status(slug), ensure_ascii=False, indent=2) + "\n"
+        else:
+            rel_template = f"workbench/feature-template/{filename}"
+            content = render_template(rel_template, variables, "")
         if filename == "SPEC.md":
             content = content.replace("待填写。", name, 1)
         target = project / rel_target
@@ -2674,27 +2986,28 @@ def is_placeholder_value(value: str | None) -> bool:
 
 def feature_package_state(package: Path) -> dict[str, Any]:
     texts = {filename: read_text_safe(package / filename) for filename in FEATURE_PACKAGE_FILES}
-    checklist = texts.get("CHECKLIST.md", "")
     spec = texts.get("SPEC.md", "")
+    status_json = read_json(package / "FEATURE_STATUS.json") or {}
     return {
-        "featureStatus": (frontmatter_field(checklist, "feature_status") or "active").lower(),
-        "currentStage": (frontmatter_field(checklist, "current_stage") or "unknown").lower(),
-        "riskLevel": (frontmatter_field(spec, "risk_level") or "unclassified").lower(),
+        "featureStatus": str(status_json.get("feature_status") or "active").lower(),
+        "currentStage": str(status_json.get("current_stage") or "CHANGE").upper(),
+        "riskLevel": str(status_json.get("risk_level") or frontmatter_field(spec, "risk_level") or "unclassified").lower(),
+        "workflowProfile": str(status_json.get("workflow_profile") or frontmatter_field(spec, "workflow_profile") or "unclassified").lower(),
         "impactScore": frontmatter_int(spec, "impact_score"),
         "uncertaintyScore": frontmatter_int(spec, "uncertainty_score"),
         "rollbackScore": frontmatter_int(spec, "rollback_score"),
         "riskScore": frontmatter_int(spec, "risk_score"),
         "hardTriggers": frontmatter_field(spec, "hard_triggers"),
         "classificationReason": frontmatter_field(spec, "classification_reason"),
+        "changeStatus": (frontmatter_field(texts.get("CHANGE_REQUEST.md", ""), "status") or "draft").lower(),
+        "impactStatus": (frontmatter_field(texts.get("IMPACT_ANALYSIS.md", ""), "status") or "draft").lower(),
         "specStatus": (frontmatter_field(spec, "status") or "draft").lower(),
-        "clarifyStatus": (frontmatter_field(texts.get("CLARIFY.md", ""), "status") or "blocked").lower(),
         "designStatus": (frontmatter_field(texts.get("DESIGN.md", ""), "status") or "draft").lower(),
         "planStatus": (frontmatter_field(texts.get("PLAN.md", ""), "status") or "draft").lower(),
         "tasksStatus": (frontmatter_field(texts.get("TASKS.md", ""), "status") or "draft").lower(),
-        "implementationAllowed": frontmatter_bool(checklist, "implementation_allowed"),
-        "deliveryAllowed": frontmatter_bool(checklist, "delivery_allowed"),
+        "implementationAllowed": bool(status_json.get("implementation_allowed")),
+        "deliveryAllowed": bool(status_json.get("delivery_allowed")),
         "specApprovedForPlan": frontmatter_bool(texts.get("SPEC.md", ""), "approved_for_plan"),
-        "clarifyReadyForPlan": frontmatter_bool(texts.get("CLARIFY.md", ""), "ready_for_plan"),
         "designApprovedForPlan": frontmatter_bool(texts.get("DESIGN.md", ""), "approved_for_plan"),
         "planApprovedForTasks": frontmatter_bool(texts.get("PLAN.md", ""), "approved_for_tasks"),
         "planApprovedForImplementation": frontmatter_bool(texts.get("PLAN.md", ""), "approved_for_implementation"),
@@ -2702,36 +3015,54 @@ def feature_package_state(package: Path) -> dict[str, Any]:
         "verifyStatus": (frontmatter_field(texts.get("VERIFY.md", ""), "status") or "missing").lower(),
         "reviewStatus": (frontmatter_field(texts.get("REVIEW.md", ""), "status") or "pending").lower(),
         "workbenchUpgradeAssessment": (frontmatter_field(texts.get("REVIEW.md", ""), "workbench_upgrade_assessment") or "unassessed").lower(),
-        "hasOpenClarification": bool(re.search(r"(?im)^\|\s*C\d+\s*\|.*\|\s*open\s*\|\s*$", texts.get("CLARIFY.md", ""))),
+        "featureVerificationStatus": str(status_json.get("verification_status") or "not_run").lower(),
+        "featureReviewStatus": str(status_json.get("review_status") or "not_reviewed").lower(),
+        "featureGateStatus": str(status_json.get("gate_status") or "not_run").lower(),
+        "statusUpgradeAssessment": str(status_json.get("workbench_upgrade_assessment") or "unassessed").lower(),
+        "requiredArtifacts": status_json.get("required_artifacts") if isinstance(status_json.get("required_artifacts"), list) else [],
+        "hasStatusJson": bool(status_json),
         "verifyEmpty": "|  |  |  |" in texts.get("VERIFY.md", "") and "- [ ] 可以交付。" in texts.get("VERIFY.md", ""),
-        "hasUncheckedChecklist": bool(re.search(r"(?m)^- \[ \]", checklist)),
         "hasUncheckedTasks": bool(re.search(r"(?m)^- \[ \]", texts.get("TASKS.md", ""))),
     }
 
 
-def feature_stage_index(stage: str) -> int:
+def workflow_stage_index(stage: str) -> int:
     try:
-        return FEATURE_STAGE_ORDER.index(stage)
+        return WORKFLOW_STAGE_ORDER.index(stage)
     except ValueError:
         return -1
 
 
-def feature_stage_reached(state: dict[str, Any], stage: str) -> bool:
-    current = feature_stage_index(state["currentStage"])
-    expected = feature_stage_index(stage)
+def workflow_stage_reached(state: dict[str, Any], stage: str) -> bool:
+    current = workflow_stage_index(state["currentStage"])
+    expected = workflow_stage_index(stage)
     return current >= expected and expected >= 0
 
 
 def feature_state_errors(state: dict[str, Any]) -> list[str]:
     errors: list[str] = []
+    if not state["hasStatusJson"]:
+        errors.append("missing FEATURE_STATUS.json")
     if state["featureStatus"] not in FEATURE_STATUSES:
         errors.append(f"invalid feature_status '{state['featureStatus']}'")
-    if state["currentStage"] not in FEATURE_STAGES:
+    if state["currentStage"] not in WORKFLOW_STAGES:
         errors.append(f"invalid current_stage '{state['currentStage']}'")
     if state["featureStatus"] == "on_hold":
         return errors
-    if state["riskLevel"] not in RISK_LEVELS:
+    if state["riskLevel"] not in RISK_LEVELS_V2:
         errors.append(f"invalid risk_level '{state['riskLevel']}'")
+    if state["workflowProfile"] not in WORKFLOW_PROFILES:
+        errors.append(f"invalid workflow_profile '{state['workflowProfile']}'")
+    if state["featureVerificationStatus"] not in FEATURE_VERIFICATION_STATUSES:
+        errors.append(f"invalid verification_status '{state['featureVerificationStatus']}'")
+    if state["featureReviewStatus"] not in FEATURE_REVIEW_STATUSES:
+        errors.append(f"invalid review_status '{state['featureReviewStatus']}'")
+    if state["featureGateStatus"] not in FEATURE_GATE_STATUSES:
+        errors.append(f"invalid gate_status '{state['featureGateStatus']}'")
+    expected_artifacts = [filename for filename in FEATURE_PACKAGE_FILES if filename != "FEATURE_STATUS.json"]
+    missing_required_artifacts = [filename for filename in expected_artifacts if filename not in state["requiredArtifacts"]]
+    if missing_required_artifacts:
+        errors.append(f"FEATURE_STATUS.json missing required_artifacts entries: {', '.join(missing_required_artifacts)}")
     for key, label in (
         ("impactScore", "impact_score"),
         ("uncertaintyScore", "uncertainty_score"),
@@ -2750,14 +3081,12 @@ def feature_state_errors(state: dict[str, Any]) -> list[str]:
         expected_score = sum(component_scores)
         if state["riskScore"] != expected_score:
             errors.append(f"risk_score should equal impact_score + uncertainty_score + rollback_score ({expected_score})")
-        if expected_score >= 6 and state["riskLevel"] in {"l1", "l2"}:
-            errors.append("risk_level is too low for risk_score >= 6")
-        if expected_score >= 3 and state["riskLevel"] == "l1":
-            errors.append("risk_level is too low for risk_score >= 3")
+        if expected_score >= 6 and state["workflowProfile"] != "strict":
+            errors.append("workflow_profile is too low for risk_score >= 6")
+        if expected_score >= 3 and state["workflowProfile"] == "light":
+            errors.append("workflow_profile is too low for risk_score >= 3")
     if state["specStatus"] not in SPEC_STATUSES:
         errors.append(f"invalid SPEC.md status '{state['specStatus']}'")
-    if state["clarifyStatus"] not in CLARIFY_STATUSES:
-        errors.append(f"invalid CLARIFY.md status '{state['clarifyStatus']}'")
     if state["designStatus"] not in DESIGN_STATUSES:
         errors.append(f"invalid DESIGN.md status '{state['designStatus']}'")
     if state["planStatus"] not in PLAN_STATUSES:
@@ -2772,20 +3101,26 @@ def feature_state_errors(state: dict[str, Any]) -> list[str]:
         errors.append("workbench_upgrade_assessment is unassessed after failure, blocked review, or completed feature")
     if state["workbenchUpgradeAssessment"] != "unassessed" and state["workbenchUpgradeAssessment"] not in WORKBENCH_UPGRADE_ASSESSMENTS:
         errors.append(f"invalid workbench_upgrade_assessment '{state['workbenchUpgradeAssessment']}'")
-    if feature_stage_reached(state, "plan") and (state["specStatus"] != "approved" or not state["specApprovedForPlan"]):
+    if state["statusUpgradeAssessment"] != "unassessed" and state["statusUpgradeAssessment"] not in WORKBENCH_UPGRADE_ASSESSMENTS:
+        errors.append(f"invalid FEATURE_STATUS.json workbench_upgrade_assessment '{state['statusUpgradeAssessment']}'")
+    if workflow_stage_reached(state, "PLAN") and state["impactStatus"] not in {"ready", "approved"}:
+        errors.append("current_stage reached PLAN before IMPACT_ANALYSIS.md was ready")
+    if workflow_stage_reached(state, "PLAN") and (state["specStatus"] != "approved" or not state["specApprovedForPlan"]):
         errors.append("current_stage reached plan before SPEC.md was approved_for_plan")
-    if feature_stage_reached(state, "plan") and (state["clarifyStatus"] not in {"ready", "deferred"} or not state["clarifyReadyForPlan"]):
-        errors.append("current_stage reached plan before CLARIFY.md was ready_for_plan")
-    if feature_stage_reached(state, "plan") and (state["designStatus"] != "approved" or not state["designApprovedForPlan"]):
+    if workflow_stage_reached(state, "PLAN") and (state["designStatus"] != "approved" or not state["designApprovedForPlan"]):
         errors.append("current_stage reached plan before DESIGN.md was approved_for_plan")
-    if feature_stage_reached(state, "tasks") and (state["planStatus"] != "approved" or not state["planApprovedForTasks"]):
+    if workflow_stage_reached(state, "IMPLEMENT") and (state["planStatus"] != "approved" or not state["planApprovedForTasks"]):
         errors.append("current_stage reached tasks before PLAN.md was approved_for_tasks")
-    if feature_stage_reached(state, "implement") and (not state["planApprovedForImplementation"] or state["tasksStatus"] != "ready" or not state["tasksReadyForImplementation"]):
+    if workflow_stage_reached(state, "IMPLEMENT") and (not state["planApprovedForImplementation"] or state["tasksStatus"] != "ready" or not state["tasksReadyForImplementation"]):
         errors.append("current_stage reached implement before PLAN/TASKS allowed implementation")
-    if feature_stage_reached(state, "review") and state["verifyStatus"] != "passed":
+    if workflow_stage_reached(state, "REVIEW") and state["verifyStatus"] != "passed":
         errors.append("current_stage reached review before VERIFY.md passed")
-    if state["currentStage"] == "complete" and state["reviewStatus"] != "passed":
+    if state["currentStage"] == "DONE" and state["reviewStatus"] != "passed":
         errors.append("current_stage is complete before REVIEW.md passed")
+    if state["implementationAllowed"] and (not state["planApprovedForImplementation"] or not state["tasksReadyForImplementation"]):
+        errors.append("FEATURE_STATUS.json allows implementation before PLAN/TASKS allow it")
+    if state["deliveryAllowed"] and (state["verifyStatus"] != "passed" or state["reviewStatus"] != "passed"):
+        errors.append("FEATURE_STATUS.json allows delivery before VERIFY/REVIEW pass")
     return errors
 
 
@@ -2912,21 +3247,17 @@ def audit_adapter(project: Path) -> dict[str, Any]:
             invalid_state_errors = [error for error in state_errors if error.startswith("invalid ")]
             stage_order_errors = [error for error in state_errors if error not in invalid_state_errors]
             for error in invalid_state_errors:
-                findings.append(issue("P1", "invalid-feature-state-field", error, f"{rel_package}/CHECKLIST.md"))
+                findings.append(issue("P1", "invalid-feature-state-field", error, f"{rel_package}/FEATURE_STATUS.json"))
             for error in stage_order_errors:
-                findings.append(issue("P1", "invalid-feature-stage-order", error, f"{rel_package}/CHECKLIST.md"))
+                findings.append(issue("P1", "invalid-feature-stage-order", error, f"{rel_package}/FEATURE_STATUS.json"))
             if invalid_state_errors:
                 continue
             if state["featureStatus"] == "on_hold":
                 continue
-            if state["hasOpenClarification"]:
-                findings.append(issue("P1", "open-blocking-clarification", "Feature package has unresolved blocking clarification items.", f"{rel_package}/CLARIFY.md"))
             if state["featureStatus"] == "active":
-                findings.append(issue("P2", "active-feature-not-complete", "Feature package is active but not complete. Finish the SDD stages before delivery, or set feature_status to on_hold if this is parked work.", f"{rel_package}/CHECKLIST.md"))
+                findings.append(issue("P2", "active-feature-not-complete", "Feature package is active but not complete. Finish the state-machine stages before delivery, or set feature_status to on_hold if this is parked work.", f"{rel_package}/FEATURE_STATUS.json"))
             if not state["specApprovedForPlan"]:
                 findings.append(issue("P2", "spec-not-approved", "SPEC.md is not approved for planning.", f"{rel_package}/SPEC.md"))
-            if not state["clarifyReadyForPlan"]:
-                findings.append(issue("P2", "clarify-not-ready", "CLARIFY.md is not ready for planning.", f"{rel_package}/CLARIFY.md"))
             if not state["designApprovedForPlan"]:
                 findings.append(issue("P2", "design-not-approved", "DESIGN.md is not approved for planning.", f"{rel_package}/DESIGN.md"))
             if not state["planApprovedForTasks"] or not state["planApprovedForImplementation"]:
@@ -2937,8 +3268,8 @@ def audit_adapter(project: Path) -> dict[str, Any]:
                 findings.append(issue("P2", "feature-verification-incomplete", "VERIFY.md does not show passed verification evidence.", f"{rel_package}/VERIFY.md"))
             if state["reviewStatus"] != "passed":
                 findings.append(issue("P2", "feature-review-incomplete", "REVIEW.md has not passed.", f"{rel_package}/REVIEW.md"))
-            if not state["implementationAllowed"] or not state["deliveryAllowed"] or state["hasUncheckedChecklist"] or state["hasUncheckedTasks"]:
-                findings.append(issue("P2", "feature-stage-gates-incomplete", "Feature package still has unchecked stage gates or tasks.", f"{rel_package}/CHECKLIST.md"))
+            if not state["implementationAllowed"] or not state["deliveryAllowed"] or state["hasUncheckedTasks"]:
+                findings.append(issue("P2", "feature-stage-gates-incomplete", "Feature package still has incomplete state gates or unchecked tasks.", f"{rel_package}/FEATURE_STATUS.json"))
 
     for path in scan_text_files(project):
         rel = rel_to(project, path)
@@ -3137,10 +3468,11 @@ def write_sample_old_workbench(root: Path) -> None:
 
 
 def mark_feature_on_hold(root: Path, slug: str) -> None:
-    checklist = root / "workbench" / "features" / slug / "CHECKLIST.md"
-    text = checklist.read_text(encoding="utf-8")
-    text = re.sub(r"(?im)^feature_status:\s*active\s*$", "feature_status: on_hold", text)
-    checklist.write_text(text, encoding="utf-8")
+    status_path = root / "workbench" / "features" / slug / "FEATURE_STATUS.json"
+    data = json.loads(status_path.read_text(encoding="utf-8"))
+    data["feature_status"] = "on_hold"
+    data["current_stage"] = "BLOCKED"
+    status_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def assert_condition(condition: bool, message: str, failures: list[str]) -> None:
@@ -3177,22 +3509,30 @@ def run_golden_case(name: str, builder: Any) -> dict[str, Any]:
         assert_condition((root / "workbench" / "scorecard" / "scorecard.py").exists(), f"{name}: scorecard.py was not generated", failures)
         assert_condition("run_scorecard" in (root / "workbench" / "quality" / "quality_gate.py").read_text(encoding="utf-8"), f"{name}: quality gate does not call scorecard", failures)
         assert_condition((root / "workbench" / "feedback" / "AI_EFFECTIVENESS.md").exists(), f"{name}: AI_EFFECTIVENESS.md was not generated", failures)
+        assert_condition((root / "PROJECT_STATE.md").exists(), f"{name}: PROJECT_STATE.md was not generated", failures)
+        assert_condition((root / "workbench" / "delivery" / "CHANGE_LOG.md").exists(), f"{name}: CHANGE_LOG.md was not generated", failures)
+        assert_condition((root / "workbench" / "delivery" / "TRACEABILITY.md").exists(), f"{name}: TRACEABILITY.md was not generated", failures)
+        assert_condition((root / "workbench" / "runtime" / "WORKFLOW_STATE.schema.json").exists(), f"{name}: WORKFLOW_STATE schema was not generated", failures)
+        assert_condition((root / "workbench" / "runtime" / "BYPASS_LOG.md").exists(), f"{name}: BYPASS_LOG.md was not generated", failures)
+        assert_condition((root / "workbench" / "feature-template" / "CHANGE_REQUEST.md").exists(), f"{name}: feature CHANGE_REQUEST template was not generated", failures)
+        assert_condition((root / "workbench" / "feature-template" / "IMPACT_ANALYSIS.md").exists(), f"{name}: feature IMPACT_ANALYSIS template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "SPEC.md").exists(), f"{name}: feature SPEC template was not generated", failures)
-        assert_condition((root / "workbench" / "feature-template" / "CLARIFY.md").exists(), f"{name}: feature CLARIFY template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "DESIGN.md").exists(), f"{name}: feature DESIGN template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "DECISIONS.md").exists(), f"{name}: feature DECISIONS template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "IMPLEMENTATION_NOTES.md").exists(), f"{name}: feature IMPLEMENTATION_NOTES template was not generated", failures)
-        assert_condition((root / "workbench" / "feature-template" / "CHECKLIST.md").exists(), f"{name}: feature CHECKLIST template was not generated", failures)
+        assert_condition((root / "workbench" / "feature-template" / "FEATURE_STATUS.schema.json").exists(), f"{name}: feature status schema was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "VERIFY.md").exists(), f"{name}: feature VERIFY template was not generated", failures)
         assert_condition((root / "workbench" / "feature-template" / "CHANGELOG.md").exists(), f"{name}: feature CHANGELOG template was not generated", failures)
         feature_preview = create_feature_package(root, "User Login", dry_run=True, force=False)
         assert_condition(feature_preview["featureSlug"] == "user-login", f"{name}: feature slug was not normalized", failures)
         feature = create_feature_package(root, "User Login", dry_run=False, force=False)
+        assert_condition((root / "workbench" / "features" / "user-login" / "CHANGE_REQUEST.md").exists(), f"{name}: feature package CHANGE_REQUEST was not created", failures)
+        assert_condition((root / "workbench" / "features" / "user-login" / "IMPACT_ANALYSIS.md").exists(), f"{name}: feature package IMPACT_ANALYSIS was not created", failures)
         assert_condition((root / "workbench" / "features" / "user-login" / "SPEC.md").exists(), f"{name}: feature package SPEC was not created", failures)
-        assert_condition((root / "workbench" / "features" / "user-login" / "CLARIFY.md").exists(), f"{name}: feature package CLARIFY was not created", failures)
         assert_condition((root / "workbench" / "features" / "user-login" / "DESIGN.md").exists(), f"{name}: feature package DESIGN was not created", failures)
         assert_condition((root / "workbench" / "features" / "user-login" / "DECISIONS.md").exists(), f"{name}: feature package DECISIONS was not created", failures)
         assert_condition((root / "workbench" / "features" / "user-login" / "CHANGELOG.md").exists(), f"{name}: feature package CHANGELOG was not created", failures)
+        assert_condition((root / "workbench" / "features" / "user-login" / "FEATURE_STATUS.json").exists(), f"{name}: feature package FEATURE_STATUS was not created", failures)
         active_audit = audit_adapter(root)
         assert_condition(active_audit["summary"]["P1"] > 0 or active_audit["summary"]["P2"] > 0, f"{name}: active incomplete feature should be audited", failures)
         mark_feature_on_hold(root, "user-login")
@@ -3224,12 +3564,15 @@ def run_upgrade_golden_case() -> dict[str, Any]:
         preview = upgrade_adapter(root, "old-workbench", dry_run=True, replace_docs=False, refresh_generated=False)
         assert_condition(preview["files"]["AGENTS.md"]["action"] == "keep-existing-doc", "upgrade should preserve existing AGENTS.md by default", failures)
         assert_condition(preview["files"]["PROJECT_INTAKE.md"]["action"] == "write-missing", "upgrade should add missing PROJECT_INTAKE.md", failures)
+        assert_condition(preview["files"]["PROJECT_STATE.md"]["action"] == "write-missing", "upgrade should add missing PROJECT_STATE.md", failures)
         assert_condition(preview["files"]["DEVELOPMENT_FLOW.md"]["action"] == "write-missing", "upgrade should add missing DEVELOPMENT_FLOW.md", failures)
         assert_condition(preview["files"]["PRODUCT_BASELINE.md"]["action"] == "write-missing", "upgrade should add missing PRODUCT_BASELINE.md", failures)
         assert_condition(preview["files"]["FEATURE_WORKFLOW.md"]["action"] == "write-missing", "upgrade should add missing FEATURE_WORKFLOW.md", failures)
         assert_condition(preview["files"]["workbench/product/PRODUCT_BRIEF.md"]["action"] == "write-missing", "upgrade should add missing PRODUCT_BRIEF.md", failures)
         assert_condition(preview["files"]["workbench/design/UX_SPEC.md"]["action"] == "write-missing", "upgrade should add missing UX_SPEC.md", failures)
         assert_condition(preview["files"]["workbench/architecture/ARCHITECTURE.md"]["action"] == "write-missing", "upgrade should add missing ARCHITECTURE.md", failures)
+        assert_condition(preview["files"]["workbench/delivery/TRACEABILITY.md"]["action"] == "write-missing", "upgrade should add missing TRACEABILITY.md", failures)
+        assert_condition(preview["files"]["workbench/delivery/CHANGE_LOG.md"]["action"] == "write-missing", "upgrade should add missing CHANGE_LOG.md", failures)
         assert_condition(preview["files"]["workbench/scorecard/RUBRIC.md"]["action"] == "write-missing", "upgrade should add missing scorecard RUBRIC.md", failures)
         assert_condition(preview["files"]["workbench/scorecard/CALIBRATION.md"]["action"] == "write-missing", "upgrade should add missing scorecard CALIBRATION.md", failures)
         assert_condition(preview["files"]["workbench/scorecard/scorecard.py"]["action"] == "write-missing", "upgrade should add missing scorecard.py", failures)
@@ -3239,20 +3582,24 @@ def run_upgrade_golden_case() -> dict[str, Any]:
         audit = audit_adapter(root)
         assert_condition((root / "AGENTS.md").read_text(encoding="utf-8").startswith("# Old Rules"), "upgrade overwrote existing AGENTS.md", failures)
         assert_condition((root / "PROJECT_INTAKE.md").exists(), "upgrade did not write missing PROJECT_INTAKE.md", failures)
+        assert_condition((root / "PROJECT_STATE.md").exists(), "upgrade did not write missing PROJECT_STATE.md", failures)
         assert_condition((root / "DEVELOPMENT_FLOW.md").exists(), "upgrade did not write missing DEVELOPMENT_FLOW.md", failures)
         assert_condition((root / "PRODUCT_BASELINE.md").exists(), "upgrade did not write missing PRODUCT_BASELINE.md", failures)
         assert_condition((root / "FEATURE_WORKFLOW.md").exists(), "upgrade did not write missing FEATURE_WORKFLOW.md", failures)
         assert_condition((root / "workbench" / "product" / "PRODUCT_BRIEF.md").exists(), "upgrade did not write missing PRODUCT_BRIEF.md", failures)
         assert_condition((root / "workbench" / "design" / "UX_SPEC.md").exists(), "upgrade did not write missing UX_SPEC.md", failures)
         assert_condition((root / "workbench" / "architecture" / "ARCHITECTURE.md").exists(), "upgrade did not write missing ARCHITECTURE.md", failures)
+        assert_condition((root / "workbench" / "delivery" / "TRACEABILITY.md").exists(), "upgrade did not write missing TRACEABILITY.md", failures)
+        assert_condition((root / "workbench" / "delivery" / "CHANGE_LOG.md").exists(), "upgrade did not write missing CHANGE_LOG.md", failures)
         assert_condition((root / "workbench" / "scorecard" / "RUBRIC.md").exists(), "upgrade did not write scorecard RUBRIC.md", failures)
         assert_condition((root / "workbench" / "scorecard" / "CALIBRATION.md").exists(), "upgrade did not write scorecard CALIBRATION.md", failures)
         assert_condition((root / "workbench" / "scorecard" / "scorecard.py").exists(), "upgrade did not write scorecard.py", failures)
+        assert_condition((root / "workbench" / "feature-template" / "CHANGE_REQUEST.md").exists(), "upgrade did not write feature change request template", failures)
+        assert_condition((root / "workbench" / "feature-template" / "IMPACT_ANALYSIS.md").exists(), "upgrade did not write feature impact analysis template", failures)
         assert_condition((root / "workbench" / "feature-template" / "TASKS.md").exists(), "upgrade did not write feature task template", failures)
-        assert_condition((root / "workbench" / "feature-template" / "CLARIFY.md").exists(), "upgrade did not write feature clarify template", failures)
         assert_condition((root / "workbench" / "feature-template" / "DESIGN.md").exists(), "upgrade did not write feature design template", failures)
         assert_condition((root / "workbench" / "feature-template" / "DECISIONS.md").exists(), "upgrade did not write feature decisions template", failures)
-        assert_condition((root / "workbench" / "feature-template" / "CHECKLIST.md").exists(), "upgrade did not write feature checklist template", failures)
+        assert_condition((root / "workbench" / "feature-template" / "FEATURE_STATUS.schema.json").exists(), "upgrade did not write feature status schema", failures)
         assert_condition((root / "workbench" / "quality" / "quality_gate.py").exists(), "upgrade did not write missing quality_gate.py", failures)
         assert_condition(validation["passed"], "upgrade validation failed", failures)
         assert_condition(audit["summary"]["P0"] == 0, "upgrade audit has P0 findings", failures)

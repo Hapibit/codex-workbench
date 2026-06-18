@@ -4,7 +4,7 @@ status: draft
 owner: project owner
 updated_at: unconfirmed
 
-本文件记录公开接口、内部接口、错误响应和权限约束。公开 API 合约变化最低按 L3 功能处理。
+本文件记录公开接口、内部接口、错误响应和权限约束。公开 API 合约变化最低按 `strict` 功能处理。
 
 ## API 契约
 
@@ -25,4 +25,3 @@ updated_at: unconfirmed
 - [ ] 输入非法。
 - [ ] 资源不存在。
 - [ ] 幂等或重复提交场景。
-

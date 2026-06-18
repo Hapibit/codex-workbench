@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codex-workbench-workflow-state.schema.json",
+  "title": "Codex Workbench Workflow State",
+  "type": "object",
+  "required": [
+    "schema",
+    "workbench_version",
+    "generated_by",
+    "created_at",
+    "project_root",
+    "git_head",
+    "diff_hash",
+    "current_stage",
+    "implementation_allowed",
+    "delivery_allowed",
+    "branch_protection"
+  ],
+  "properties": {
+    "schema": { "const": "codex-workbench-workflow-state/v2" },
+    "workbench_version": { "type": "string" },
+    "generated_by": { "type": "string" },
+    "created_at": { "type": "string" },
+    "project_root": { "type": "string" },
+    "git_head": { "type": "string" },
+    "diff_hash": { "type": "string" },
+    "active_feature": { "type": ["string", "null"] },
+    "current_stage": {
+      "type": "string",
+      "enum": ["CLASSIFY", "BASELINE_CHECK", "CHANGE", "IMPACT", "ROUTE", "PLAN", "IMPLEMENT", "VERIFY", "REVIEW", "GATE", "LEARN", "DONE", "BLOCKED"]
+    },
+    "workflow_profile": {
+      "type": "string",
+      "enum": ["light", "standard", "strict", "unclassified"]
+    },
+    "implementation_allowed": { "type": "boolean" },
+    "delivery_allowed": { "type": "boolean" },
+    "source_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "last_gate_status": {
+      "type": "string",
+      "enum": ["passed", "failed", "stale", "unknown"]
+    },
+    "branch_protection": {
+      "type": "string",
+      "enum": ["verified", "unverified", "not_applicable"]
+    },
+    "unverified_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

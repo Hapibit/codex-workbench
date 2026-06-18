@@ -19,7 +19,7 @@
 - UI/交互是否能追溯到 `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` 或功能 `DESIGN.md`。
 - 架构、数据、API 或 AI 行为是否能追溯到 `workbench/architecture/ARCHITECTURE.md`、`DATA_MODEL.md`、`API_DESIGN.md`、`AI_DESIGN.md` 或 ADR。
 - 用户可见功能是否满足 `PRODUCT_BASELINE.md` 的产品下限。
-- 新功能、跨模块或高风险改动是否有 `FEATURE_WORKFLOW.md` 要求的 SPEC/CLARIFY/DESIGN/PLAN/TASKS/DECISIONS/CHECKLIST/VERIFY/REVIEW 证据；如没有，是否有合理简化说明。
+- 新功能、跨模块或高风险改动是否有 `FEATURE_WORKFLOW.md` 要求的 CHANGE_REQUEST/IMPACT_ANALYSIS/SPEC/DESIGN/PLAN/TASKS/DECISIONS/VERIFY/REVIEW/FEATURE_STATUS 证据；如没有，是否有合理简化说明。
 - `workbench/scorecard/scorecard.py` 是否输出 `BLOCKED`、`PASS_WITH_RISK` 或 `PASS`，是否存在硬阻塞，`SCORECARD.md` 是否记录语义和架构复核状态。
 - 角色、资源、租户、组织、课程、用户、文件、订单等所有权边界是否被保留。
 - 公开 API、数据库 schema、前后端数据契约、事件/消息格式是否兼容。

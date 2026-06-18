@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "codex-workbench-feature-status.schema.json",
+  "title": "Codex Workbench Feature Status",
+  "type": "object",
+  "required": [
+    "schema",
+    "feature_id",
+    "feature_status",
+    "risk_level",
+    "workflow_profile",
+    "current_stage",
+    "implementation_allowed",
+    "delivery_allowed",
+    "required_artifacts",
+    "verification_status",
+    "review_status",
+    "gate_status",
+    "workbench_upgrade_assessment"
+  ],
+  "properties": {
+    "schema": { "const": "codex-workbench-feature-status/v2" },
+    "feature_id": { "type": "string" },
+    "feature_status": {
+      "type": "string",
+      "enum": ["active", "on_hold", "complete", "blocked", "failed", "repeated_issue"]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["light", "standard", "strict", "unclassified"]
+    },
+    "workflow_profile": {
+      "type": "string",
+      "enum": ["light", "standard", "strict", "unclassified"]
+    },
+    "current_stage": {
+      "type": "string",
+      "enum": ["CLASSIFY", "BASELINE_CHECK", "CHANGE", "IMPACT", "ROUTE", "PLAN", "IMPLEMENT", "VERIFY", "REVIEW", "GATE", "LEARN", "DONE", "BLOCKED"]
+    },
+    "implementation_allowed": { "type": "boolean" },
+    "delivery_allowed": { "type": "boolean" },
+    "required_artifacts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": ["not_run", "partial", "passed", "failed", "blocked"]
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["not_reviewed", "passed", "failed", "blocked"]
+    },
+    "gate_status": {
+      "type": "string",
+      "enum": ["not_run", "passed", "failed", "stale"]
+    },
+    "workbench_upgrade_assessment": {
+      "type": "string",
+      "enum": ["required", "deferred", "not_required", "unassessed"]
+    },
+    "source_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

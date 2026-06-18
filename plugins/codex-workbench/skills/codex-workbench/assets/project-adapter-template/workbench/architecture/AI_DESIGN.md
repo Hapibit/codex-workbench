@@ -4,7 +4,7 @@ status: draft
 owner: project owner
 updated_at: unconfirmed
 
-本文件记录 AI/RAG/Agent 的输入、输出、工具、数据来源、人工确认、隐私和 eval。AI 输出影响核心数据或用户权益时最低按 L3 功能处理。
+本文件记录 AI/RAG/Agent 的输入、输出、工具、数据来源、人工确认、隐私和 eval。AI 输出影响核心数据或用户权益时最低按 `strict` 功能处理。
 
 ## AI 能力
 
@@ -34,4 +34,3 @@ updated_at: unconfirmed
 
 - AI 表现变化、返工、幻觉、工具误用、RAG 错误必须记录到功能包 `VERIFY.md` / `REVIEW.md`。
 - 跨功能重复问题汇总到 `workbench/feedback/AI_EFFECTIVENESS.md` 和 `FAILURE_LOG.md`。
-

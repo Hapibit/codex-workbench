@@ -3,6 +3,7 @@
 status: missing
 verified_by: unconfirmed
 verified_at: unconfirmed
+workbench_upgrade_assessment: unassessed
 
 ## 验证环境
 
@@ -66,9 +67,11 @@ verified_at: unconfirmed
 
 ## 未验证项
 
-| 项目 | 原因 | 风险 | 后续补验证方式 |
-| --- | --- | --- | --- |
-|  |  |  |  |
+| 项目 | 原因 | 风险 | accepted_risk | 用户确认 | 替代验证 | deferred_follow_up |
+| --- | --- | --- | --- | --- | --- | --- |
+|  |  |  | false |  |  |  |
+
+strict 变更不能只写“无法验证原因”就放行。必须同时具备 `accepted_risk`、用户确认、替代验证和 `deferred_follow_up`，否则质量门应失败或输出 `PASS_WITH_RISK`。
 
 ## 失败证据
 

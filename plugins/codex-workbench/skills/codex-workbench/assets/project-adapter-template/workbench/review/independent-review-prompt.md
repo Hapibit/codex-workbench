@@ -16,7 +16,7 @@
 - 产品或验收变化：`workbench/product/PRODUCT_BRIEF.md`、`workbench/product/PRD.md`、`workbench/product/ROADMAP.md`
 - 用户可见流程或 UI 变化：`workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md`
 - 模块、数据、API、AI 工具或权限变化：`workbench/architecture/`
-- 当前功能包：`workbench/features/<feature-name>/SPEC.md`、`CLARIFY.md`、`DESIGN.md`、`PLAN.md`、`TASKS.md`、`VERIFY.md`、`REVIEW.md`
+- 当前功能包：`workbench/features/<feature-name>/CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md`、`SPEC.md`、`DESIGN.md`、`PLAN.md`、`TASKS.md`、`VERIFY.md`、`REVIEW.md`、`FEATURE_STATUS.json`
 - 质量和证据审计：`.workbench-validation/`、`workbench/scorecard/SCORECARD.md`、`workbench/scorecard/CALIBRATION.md`
 
 然后检查当前 diff 或用户明确指定的文件。
@@ -37,4 +37,4 @@
 
 - 未发现 P0/P1 问题时，明确写“未发现 P0/P1 问题”。
 - 列出验证缺口和仍需人工确认的业务/产品/架构判断。
-- 给出 `workbench_upgrade_assessment` 建议：`not_required`、`failure_log_updated`、`template_update_needed`、`quality_gate_update_needed`、`review_rule_update_needed`、`ci_or_hook_needed` 或 `deferred_with_reason`。
+- 给出 `workbench_upgrade_assessment` 建议：`required`、`deferred` 或 `not_required`。

@@ -30,7 +30,7 @@
 - `REVIEW.md`：项目审查标准，要求审查先报风险、再报建议。
 - `DEVELOPMENT_FLOW.md`：项目开发流程契约。默认是 `status: draft`，必须由项目负责人确认后才作为功能开发流程。
 - `PRODUCT_BASELINE.md`：产品下限标准，防止功能只写完代码但用户不可用。
-- `FEATURE_WORKFLOW.md`：单功能 SDD 工作包流程，定义 SPEC、CLARIFY、PLAN、TASKS、DECISIONS、CHECKLIST、VERIFY、REVIEW 的闭环。
+- `FEATURE_WORKFLOW.md`：单功能状态机工作包流程，定义 CHANGE_REQUEST、IMPACT_ANALYSIS、SPEC、DESIGN、PLAN、TASKS、VERIFY、REVIEW、GATE、LEARN 的闭环。
 - `workbench/quality/quality_gate.py`：跨平台质量门，是本项目的主要确定性检查入口。
 - `workbench/quality/quality-gate.ps1`：Windows 包装器，只负责调用 Python 质量门。
 - `workbench/quality/quality-gate.sh`：macOS/Linux 包装器，只负责调用 Python 质量门。
@@ -60,7 +60,7 @@ Use Codex Workbench to tell me the next step for this project.
 | 要设计用户路径、页面状态、原型 | `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` | 写清入口、主流程、失败流程、错误/空/加载/权限状态和原型证据。 | UI/UX、Figma、前端设计 |
 | 要确定模块、数据、API、AI、权限边界 | `workbench/architecture/` | 写清模块边界、数据模型、API 合约、AI 工具调用、权限边界、ADR 和回滚约束。 | 架构、企业 AI 生命周期、画图 |
 | 要拆版本、迭代和任务 | `workbench/delivery/` | 写清当前迭代范围、任务拆分、验证计划、依赖和回滚路径。 | CI/CD、技术文档 |
-| 要开始写某个功能 | `workbench/features/<feature-name>/` | 先建立或更新功能包，解决 `CLARIFY.md` open blocker，再实现约定范围。 | 测试、框架、语言专项能力 |
+| 要开始写某个功能 | `workbench/features/<feature-name>/` | 先建立或更新功能包，完成变更请求、影响分析和计划，再实现约定范围。 | 测试、框架、语言专项能力 |
 | 要确认质量或复盘失败 | `workbench/quality/`、`scorecard/`、`review/`、`feedback/` | 运行可用质量门，写验证证据和 review 结论；重复失败进入机制升级判断。 | 测试、CI、安全、AI eval、独立审查 |
 
 如果增强能力不存在，仍然继续走本工作台的核心文件和脚本；增强 skill 不是使用本工作台的前置条件。
@@ -89,7 +89,7 @@ Use Codex Workbench to tell me the next step for this project.
 | UX/原型 | 明确用户流程、页面状态、原型和交互 | `workbench/design/UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` |
 | 架构设计 | 明确模块、数据、API、AI、ADR 和风险 | `workbench/architecture/` |
 | 交付计划 | 明确版本、迭代和任务拆分 | `workbench/delivery/` |
-| 功能包开发 | 单功能 SPEC、CLARIFY、DESIGN、PLAN、TASKS、实现 | `workbench/features/<feature-name>/` |
+| 功能包开发 | 单功能 CHANGE、IMPACT、SPEC、DESIGN、PLAN、TASKS、实现 | `workbench/features/<feature-name>/` |
 | 验证审查 | 测试、质量门、独立审查、剩余风险 | `VERIFY.md`、`REVIEW.md`、质量门 |
 | 证据审计 | 证据成熟度、硬阻塞、架构/语义复核 | `workbench/scorecard/` |
 | 迭代复盘 | 需求变化、AI 效果、失败模式、自动化改进 | `workbench/feedback/` |
@@ -273,35 +273,35 @@ workbench/features/<feature-name>/
 Use Codex Workbench to create a feature work package named <feature-name>.
 ```
 
-先按 `FEATURE_WORKFLOW.md` 的工作量分级门选择流程强度。规则是：先检查硬触发器，再按影响范围、不确定性、回滚难度打分；判断不清楚时自动升一级或先问用户。
+先按 `FEATURE_WORKFLOW.md` 的状态机和 hard triggers 选择流程强度。规则是：先检查数据、权限、API、AI、发布、依赖、安全、生产等硬触发器，再按影响范围、不确定性和回滚难度判断 `light`、`standard` 或 `strict`；判断不清楚时自动升一级或先问用户。
 
-- L1 轻量任务：不强制创建完整功能包，但必须记录问题、改动、验证和风险。
-- L2 中等任务：创建功能工作包，至少完成 SPEC、CLARIFY、PLAN、VERIFY，按需补 TASKS、DECISIONS、REVIEW。
-- L3 重量任务：完整走 SPEC、CLARIFY、PLAN、TASKS、DECISIONS、CHECKLIST、VERIFY、REVIEW。
-- L4 紧急/重大任务：可以先做最小止血修复，但事后必须补齐验证、审查、复盘和防复发自动化。
+- `light`：小文案、小样式、小 bug。可以不建完整功能包，但必须在 `workbench/delivery/CHANGE_LOG.md` 记录变更和最小验证。
+- `standard`：普通功能、单模块改动。必须有 `CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md`、`PLAN.md`、`TASKS.md`、`VERIFY.md`、`REVIEW.md`。
+- `strict`：跨模块、数据、权限、API、AI/RAG/Agent、架构或发布。必须完整功能包、追踪矩阵、质量门、独立审查或 CI 证据。
 
-只要命中数据库、权限、用户数据、AI 自动写入核心数据、公开 API、跨模块、生产部署、凭证、不可逆操作等硬触发器，最低按 L3 处理。生产事故、安全漏洞、数据损坏或服务不可用按 L4 处理。
+只要命中数据库、权限、用户数据、AI 自动写入核心数据、公开 API、跨模块、生产部署、凭证、不可逆操作等 hard triggers，最低按 `strict` 处理。
 
 然后按顺序完成：
 
-1. `SPEC.md`：需求、范围、验收标准。
-2. `CLARIFY.md`：需求缺口、阻塞问题、默认假设和已确认事实。
-3. `PLAN.md`：技术方案、影响文件、风险。
-4. `TASKS.md`：小步任务。
-5. `DECISIONS.md`：关键取舍和实现偏离记录。
-6. `CHECKLIST.md`：阶段门禁。
-7. 实现代码。
-8. `VERIFY.md`：验证命令、手工验收、剩余风险。
-9. `REVIEW.md`：功能级审查和自动化改进项。
+1. `CHANGE_REQUEST.md`：变更目标、范围、非目标、验收标准。
+2. `IMPACT_ANALYSIS.md`：影响 PRD、UX、API、DATA、AI、TEST、RELEASE、TRACEABILITY 的判断。
+3. `SPEC.md`：功能级增量规格。
+4. `DESIGN.md`：功能级 UX、架构、数据、API、AI 设计。
+5. `PLAN.md`：技术方案、影响文件、风险。
+6. `TASKS.md`：小步任务。
+7. `FEATURE_STATUS.json`：机器状态索引。
+8. 实现代码。
+9. `VERIFY.md`：验证命令、手工验收、剩余风险。
+10. `REVIEW.md`：功能级审查和自动化改进项。
 
 小 bugfix 可以简化，但不能跳过产品下限、验证证据和最终风险说明。
 
 需求中途变化时：
 
 1. 先判断变化是否影响 `PROJECT_INTAKE.md` 的项目目标、第一版范围、用户、权限、数据或 AI 边界。
-2. 如果影响项目方向，先更新 `PROJECT_INTAKE.md`，再更新相关功能 `SPEC.md`。
-3. 如果只影响当前功能，先更新 `SPEC.md`，再同步 `PLAN.md`、`TASKS.md`、`VERIFY.md` 和 `REVIEW.md`。
-4. 如果变化提高风险等级，重新按 `FEATURE_WORKFLOW.md` 分级，并补充验证和审查。
+2. 如果影响项目方向，先更新 `PROJECT_INTAKE.md` 和受影响的 product/design/architecture/delivery 基线，再更新相关功能包。
+3. 如果只影响当前功能，先更新 `CHANGE_REQUEST.md` 和 `IMPACT_ANALYSIS.md`，再同步 `SPEC.md`、`PLAN.md`、`TASKS.md`、`VERIFY.md`、`REVIEW.md` 和 `TRACEABILITY.md`。
+4. 如果变化提高风险等级，重新按 `FEATURE_WORKFLOW.md` 路由为 `standard` 或 `strict`，并补充验证和审查。
 5. 不能只在聊天里说“需求改了”，然后直接改代码。
 
 ## 工作台审计
@@ -370,12 +370,9 @@ python workbench/runtime/runtime_gate.py --apply --backend-health-url http://loc
 | `workbench_upgrade_assessment` | 含义 |
 | --- | --- |
 | `not_required` | 本次问题是一次性项目个案，已有项目内修复和验证证据，不需要升级工作台。 |
-| `failure_log_updated` | 已写入 `workbench/feedback/FAILURE_LOG.md`，等待后续归纳或自动化。 |
-| `template_update_needed` | 需要改 SPEC、CLARIFY、DESIGN、PLAN、VERIFY、REVIEW 或其他模板。 |
-| `quality_gate_update_needed` | 需要把问题加入 `workbench/quality/quality_gate.py` 或 scorecard 检查。 |
-| `review_rule_update_needed` | 需要改项目 `REVIEW.md`、独立审查提示或 P0/P1 清单。 |
-| `ci_or_hook_needed` | 需要接入 CI、pre-commit、hook 或其他硬门禁。 |
-| `deferred_with_reason` | 暂不升级，但必须说明原因、风险和后续复查位置。 |
+| `required` | 本次失败说明模板、脚本、质量门、hook、CI、测试或审查规则必须升级。 |
+| `deferred` | 暂不升级，但必须说明 owner、复查时间、风险和 `FAILURE_LOG.md` 条目。 |
+| `not_required` | 一次性问题，已经在当前功能修复并验证，不需要升级工作台机制。 |
 
 能自动化的问题优先进入脚本、测试、lint、CI 或质量门；无法自动化的业务判断才保留在 Markdown 规则里。
 

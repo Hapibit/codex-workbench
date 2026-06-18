@@ -3,13 +3,14 @@
 status: draft
 approved_for_plan: false
 
-本文件承接 `SPEC.md` 和 `CLARIFY.md`，把功能需求转成 UX、架构、数据、API、AI 和验证设计。进入 `PLAN.md` 前必须先让本文件可计划。
+本文件承接 `CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md` 和 `SPEC.md`，把功能需求转成 UX、架构、数据、API、AI 和验证设计。进入 `PLAN.md` 前必须先让本文件可计划。
 
 ## 功能设计
 
 - 对应 PRD/用户故事：
 - 对应 UX/原型：
 - 对应架构/数据/API/AI 设计：
+- 对应 TRACEABILITY ID：
 
 ## UX 影响
 
@@ -39,4 +40,3 @@ approved_for_plan: false
 - [ ] 架构、数据、API、权限和 AI 影响已经明确，或确认不涉及。
 - [ ] 设计与 `PRD.md`、`UX_SPEC.md`、`ARCHITECTURE.md` 不冲突。
 - [ ] 高风险设计已有人工确认或 ADR。
-

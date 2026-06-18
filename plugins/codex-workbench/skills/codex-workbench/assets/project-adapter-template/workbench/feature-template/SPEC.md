@@ -6,6 +6,7 @@ approved_by: unconfirmed
 approved_at: unconfirmed
 spec_updated_at: unconfirmed
 risk_level: unclassified
+workflow_profile: unclassified
 impact_score: unclassified
 uncertainty_score: unclassified
 rollback_score: unclassified
@@ -19,10 +20,12 @@ classification_reason: unclassified
 
 ## 事实源和来源
 
-本文件是当前功能的事实源。DESIGN、PLAN、TASKS、实现、VERIFY 和 REVIEW 都必须能追溯到这里。
+本文件是当前功能的增量规格。长期事实源仍是 `PROJECT_INTAKE.md`、`workbench/product/`、`workbench/design/`、`workbench/architecture/` 和 `workbench/delivery/`。本文件、DESIGN、PLAN、TASKS、实现、VERIFY 和 REVIEW 都必须能追溯到 `CHANGE_REQUEST.md` 和 `IMPACT_ANALYSIS.md`。
 
 来源依据：
 
+- `CHANGE_REQUEST.md`：
+- `IMPACT_ANALYSIS.md`：
 - `PROJECT_INTAKE.md`：
 - 用户确认：
 - 现有代码/测试/README/接口文档：
@@ -30,13 +33,13 @@ classification_reason: unclassified
 
 变更规则：
 
-- 需求变化时先更新本 SPEC，再同步 DESIGN、PLAN、TASKS、VERIFY、REVIEW 和 CHANGELOG。
+- 需求变化时先更新 `CHANGE_REQUEST.md` 和 `IMPACT_ANALYSIS.md`，再同步本 SPEC、DESIGN、PLAN、TASKS、VERIFY、REVIEW、CHANGELOG 和 `TRACEABILITY.md`。
 - 如果实现需要偏离本 SPEC，先写入 `DECISIONS.md`，再更新本文件或 PLAN。
 - 不允许把聊天里的临时说法当成最终需求，除非已经回填到本文件。
 
-## 工作量分级
+## 流程强度
 
-先按 `FEATURE_WORKFLOW.md` 检查硬触发器，再按影响范围、不确定性和回滚难度打分。判断不清楚时自动升一级或先问用户。
+先按 `FEATURE_WORKFLOW.md` 检查 hard triggers，再按影响范围、不确定性和回滚难度判断 `light`、`standard` 或 `strict`。判断不清楚时自动升一级或先问用户。
 
 硬触发器：
 
@@ -63,6 +66,7 @@ classification_reason: unclassified
 分级结论：
 
 - `risk_level`：
+- `workflow_profile`：
 - `classification_reason`：
 - 为什么没有升级：
 

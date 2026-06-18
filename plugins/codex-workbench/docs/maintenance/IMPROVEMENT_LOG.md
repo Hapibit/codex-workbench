@@ -32,6 +32,72 @@
 
 ## 记录
 
+### 2026-06-17 - 发布版本提升到 2.0.0，并按架构设计稿重构工作台为状态机
+
+问题：
+
+1.2.x 工作台仍偏向“文档集合 + 软流程提醒”。真实使用中已经暴露出 AI 可能跳过需求分析、后补功能包、复用旧质量门标记、把 scorecard 误当质量裁判、需求变化后多份文档同步负担过重等问题。用户要求以桌面架构设计稿为准，把 2.0.0 做成 AI coding 状态机、证据链和门禁体系。
+
+证据来源：
+
+- 用户反馈：
+  - 用户多次指出“工作台规则会被跳过”“怎么保证 AI 写的是对的”“需求会反复修改”“工作台太重”“评分不能靠 AI 自评”。
+  - 用户明确指定本机桌面的 `Codex Workbench 2.0.0 架构设计.md` 为本次升级依据。
+- 官方/外部资料：
+  - 架构设计稿已汇总 OpenAI Codex customization、skills/plugins、hooks、GitHub Spec Kit、NASA requirements management、Git hooks、GitHub protected branches/status checks 等资料依据。
+  - 结论是：`AGENTS.md` 和 Markdown 只能作为说明层；硬要求必须落到 runtime gate、quality gate、CI、branch protection 或可验证证据。
+- 本地失败证据：
+  - 旧模板仍存在 `CLARIFY.md`、`CHECKLIST.md`、L1/L2/L3/L4 等旧流程概念。
+  - 发布说明、reference 和 README 对 2.0.0 的状态机、追踪矩阵、影响分析、机器状态、marker 新鲜度描述不一致。
+  - `package-check` 首轮发现 Python cache residue，已清理后重跑通过。
+
+决策：
+
+将发布版本升级为 `2.0.0`，这是 major 版本。原因是公开工作流、生成目录契约和质量门语义发生变化：从旧的文档/SDD 模板流程，升级为 `CLASSIFY -> BASELINE_CHECK -> CHANGE -> IMPACT -> ROUTE -> PLAN -> IMPLEMENT -> VERIFY -> REVIEW -> GATE -> LEARN -> DONE` 状态机。保留一个公开 skill：`codex-workbench`；第三方 skill 仍作为可选增强包。
+
+核心设计落地：
+
+- 新增 `PROJECT_STATE.md`。
+- 新增 `workbench/delivery/CHANGE_LOG.md`、`TRACEABILITY.md`、`RELEASE_CHECKLIST.md`。
+- 新增 `workbench/runtime/WORKFLOW_STATE.schema.json`、`BYPASS_LOG.md`。
+- 新增 `CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md`、`FEATURE_STATUS.schema.json`，生成真实功能包时写入 `FEATURE_STATUS.json`。
+- 移除新模板中的 `CLARIFY.md` 和 `CHECKLIST.md`。
+- `quality_gate.py` 生成 `.workbench-validation/workflow-state.json` 和绑定 `git_head`、`diff_hash`、feature、commands、branch protection 状态的 `quality-gate-ok.json`。
+- `scorecard` 保持证据审计定位，不作为硬放行裁判。
+- `.workbench-validation/` 只作为机器报告区，长期维护证据放 `docs/maintenance/`。
+- 将桌面架构设计稿同步为 `docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md` 并纳入 `packaging-manifest.json`。
+
+变更文件：
+
+- `.codex-plugin/plugin.json`
+- `README.md`
+- `packaging-manifest.json`
+- `docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md`
+- `docs/WORKFLOW_AND_SCORECARD.md`
+- `docs/ITERATION_UPGRADE.md`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+- `skills/codex-workbench/SKILL.md`
+- `skills/codex-workbench/scripts/workbench.py`
+- `skills/codex-workbench/references/project-adapter-template.md`
+- `skills/codex-workbench/references/project-intake-integration.md`
+- `skills/codex-workbench/references/quality-gate-patterns.md`
+- `skills/codex-workbench/references/upgrade-strategy.md`
+- `skills/codex-workbench/references/workbench-maturity.md`
+- `skills/codex-workbench/assets/project-adapter-template/**`
+
+验证结果：
+
+- `py -m py_compile skills/codex-workbench/scripts/workbench.py`：通过。
+- `py skills/codex-workbench/scripts/workbench.py self-test`：通过。
+- `py skills/codex-workbench/scripts/workbench.py golden-test`：通过。
+- `py skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 2.0.0 --write-report`：通过，P0/P1/P2/P3 均为 0。
+- 本机桌面的 `Codex Workbench 2.0.0 架构设计.md` 与 `docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md` SHA256 一致。
+
+后续动作：
+
+- 发布前如果继续改 hook、bypass golden tests、CI workflow 或 branch protection audit，需要追加新维护记录并重跑 package-check。
+- 当前 2.0.0 已具备模板、脚本、README、架构文档和 package-check 的一致性；实际项目试水时应重点观察 `light` 记录、`FEATURE_STATUS.json`、旧 marker 失效和 `workbench_upgrade_assessment` 是否被正确执行。
+
 ### 2026-06-16 - 让 hook 区分明确授权的普通目录删除和工作台核心删除
 
 问题：

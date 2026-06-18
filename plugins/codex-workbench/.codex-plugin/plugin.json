@@ -1,7 +1,7 @@
 {
   "name": "codex-workbench",
-  "version": "1.2.0",
-  "description": "A low-friction Codex workbench package with one visible skill entrypoint for project intake, stage routing, directory contracts, feature workflows, quality gates, review rules, and failure loops.",
+  "version": "2.0.0",
+  "description": "A Codex workbench package with one visible skill entrypoint for project intake, AI coding state machines, change impact analysis, traceability, quality gates, review rules, and failure learning loops.",
   "author": {
     "name": "Hapibit"
   },
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "Codex Workbench",
     "shortDescription": "One entry for project AI workbenches.",
-    "longDescription": "Codex Workbench exposes one visible skill entrypoint and bundles its own project-intake and workbench-generation scripts. It creates repository-local AGENTS.md/WORKBENCH.md files, development flow contracts, product baselines, stage execution gates, directory contracts, feature work packages, deterministic quality/runtime gates, independent review prompts, validation/audit reports, and failure-loop evidence. Third-party and specialist skills are optional capability packs: they can enhance design, diagrams, tests, docs, CI, security, or AI eval, but users do not need to learn or install them before the workbench can run.",
+    "longDescription": "Codex Workbench exposes one visible skill entrypoint and bundles its own project-intake and workbench-generation scripts. Version 2.0.0 creates repository-local AGENTS.md/WORKBENCH.md files, project state, product/UX/architecture/delivery baselines, change requests, impact analysis, traceability, machine-readable workflow and feature status, deterministic quality/runtime gates, independent review prompts, validation/audit reports, and failure-loop evidence. Third-party and specialist skills are optional capability packs: they can enhance design, diagrams, tests, docs, CI, security, or AI eval, but users do not need to learn or install them before the workbench can run.",
     "developerName": "Hapibit",
     "category": "Productivity",
     "capabilities": ["Write", "Automation"],

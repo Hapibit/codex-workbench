@@ -1,43 +1,60 @@
 # Codex Workbench
 
-版本：`1.2.0`
+版本：`2.0.0`
 
-Codex Workbench 是给 Codex 使用的 AI 开发工作台插件。它不是一段更长的提示词，而是一套放进项目仓库里的工作方式：先把项目事实、产品需求、UX/原型、架构、交付计划、功能开发、验证审查、证据审计和失败复盘固定下来，再让 Codex 在这个框架里工作。
+Codex Workbench 是给 Codex 使用的 AI 开发工作台插件。它不是一段更长的提示词，也不是让用户背一堆 skill 名称，而是把项目从“聊天驱动”改成“状态机 + 证据链 + 工程门禁”驱动：需求、产品、UX、架构、变更、影响分析、追踪矩阵、验证、审查、质量门和失败学习都落到项目仓库里。
 
-它要解决的问题很具体：AI 写代码很快，但在真实项目里，风险通常不来自“代码写得慢”，而来自需求没确认、上下文只留在聊天里、测试没有跑、审查没有证据、同类错误反复出现。Codex Workbench 的目标是降低这些风险，让 AI 开发过程有事实源、有流程、有门禁、有证据、有迭代。
-
-安装后，普通用户主要只需要记住一个入口：
+普通用户只需要记住一个入口：
 
 ```text
 Use Codex Workbench to set up this project's AI workbench.
 ```
 
-## 设计依据
+## 为什么要做
 
-这个工作台按公开工程实践组合，不按个人感觉堆规则。
+AI 写代码很快，但真实项目的问题通常不在“生成速度”，而在这些地方：
 
-| 资料依据 | 对工作台的影响 |
-| --- | --- |
-| OpenAI Codex best practices | 稳定规则放进 `AGENTS.md`；复杂任务先规划；把构建、测试、lint、完成标准写清楚；重复流程沉淀成 skill 或插件。 |
-| OpenAI Codex customization | 先用 `AGENTS.md` 固化仓库规则，再用 skill/plugin 复用工作流，MCP 只负责外部系统连接。 |
-| OpenAI Codex skills/plugins | skill 负责可复用流程，plugin 是分发单元；所以本插件只暴露一个入口 `codex-workbench`，内部脚本和模板不要求新用户先学习。 |
-| OpenAI agent improvement loop | 改进要来自 trace、反馈、eval 和可验证变更，不靠“感觉更好”。 |
-| OpenAI Codex iterative repair loop | review、repair、validation 要分离；验证失败要成为下一轮修复输入。 |
-| SonarQube quality gates | 质量门应该是明确条件的 pass/fail，不应该让一个总分掩盖 blocker。 |
-| Rubric 设计资料 | 评分必须有明确 criteria、公开权重、校准样例、误报/漏报记录，降低主观性和偏差。 |
-| Google SRE postmortem | 失败复盘要记录事实、影响、根因、行动项和可验证完成标准。 |
-| Diataxis 与 GitHub README 建议 | README 只负责快速理解和开始使用；长解释、评分、维护和升级细节放到独立文档。 |
-| Semantic Versioning | 用 patch/minor/major 表达工作台升级对使用者的影响。 |
+- 需求没确认，AI 先脑补。
+- 规则只留在聊天里，下一轮可能被跳过。
+- PRD、UX、架构、代码和测试之间没有追踪关系。
+- AI 说“完成了”，但没有命令、截图、日志、测试、eval、CI 或 review 证据。
+- 同类错误反复出现，却没有沉淀成模板、测试、质量门、hook 或 CI。
 
-完整解释见 [WORKFLOW_AND_SCORECARD.md](plugins/codex-workbench/docs/WORKFLOW_AND_SCORECARD.md) 和 [ITERATION_UPGRADE.md](plugins/codex-workbench/docs/ITERATION_UPGRADE.md)。
+Codex Workbench 2.0.0 的目标不是承诺 AI 永远一次写对，而是把受控范围内的跳流程、漏验证、乱改范围、证据缺失和重复失败暴露出来，并尽量用 `quality_gate.py`、runtime gate、hook、pre-commit、CI 和 branch protection 阻断。
 
-## 这个插件到底做什么
+更严谨地说：
 
-它会在目标项目里生成一套项目工作台：
+```text
+Markdown 负责解释；
+JSON 负责机器状态索引；
+quality gate 负责本地判定；
+CI / branch protection 负责远程合并门禁；
+review 和 failure log 负责发现语义质量与机制缺口。
+```
+
+## 2.0.0 的核心架构
+
+2.0.0 是“五层架构 + 贯穿式 Agent Control”：
+
+| 层 | 作用 | 典型产物 |
+| --- | --- | --- |
+| Agent Control | 防止 AI 把流程当背景说明，控制当前能不能进入下一步 | `AGENTS.md`、`WORKBENCH.md`、hook、runtime gate、quality gate、`.workbench-validation/workflow-state.json` |
+| 基础约束层 | 保存长期项目事实，约束目标、范围、UX、架构、权限和 AI 边界 | `PROJECT_INTAKE.md`、`PROJECT_STATE.md`、`workbench/product/`、`workbench/design/`、`workbench/architecture/` |
+| 追踪矩阵层 | 连接需求、设计、实现和验证，发现断链和漏测 | `workbench/delivery/TRACEABILITY.md` |
+| 变更执行层 | 每次 meaningful change 从变更请求和影响分析开始 | `workbench/features/<feature>/CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md`、`PLAN.md`、`TASKS.md` |
+| 质量证据层 | 用真实证据判断能不能继续，不靠 AI 自评 | `VERIFY.md`、`REVIEW.md`、`workbench/quality/`、`workbench/runtime/`、`.workbench-validation/` |
+| 学习升级层 | 把重复失败沉淀成模板、测试、质量门、hook、CI 或文档升级 | `workbench/feedback/`、`docs/maintenance/` |
+
+`Agent Control` 是控制面，不是 `workbench/agent-control/` 目录。它贯穿每个阶段。
+
+## 生成到项目里的结构
+
+在目标项目里，插件会生成或升级这套项目工作台：
 
 ```text
 AGENTS.md
 PROJECT_INTAKE.md
+PROJECT_STATE.md
 WORKBENCH.md
 REVIEW.md
 DEVELOPMENT_FLOW.md
@@ -54,167 +71,165 @@ workbench/
 ├── runtime/
 ├── scorecard/
 ├── review/
-└── feedback/
+├── feedback/
+└── archive/
 ```
 
-这些文件不是为了“好看”，而是为了让项目开发过程可以被复查。
+明确不新增 `workbench/docs/` 作为工作台阶段目录。根目录 `docs/` 可以是普通项目文档，但不是 Codex Workbench 的标准阶段。
 
-| 层级 | 负责什么 | 主要产物 |
-| --- | --- | --- |
-| 项目发现 | 把目标用户、范围、数据、权限、AI 边界和验收先说清楚 | `PROJECT_INTAKE.md` |
-| 产品规划 | 说明为什么做、第一版做什么、不做什么、怎么验收 | `PRODUCT_BRIEF.md`、`PRD.md`、`ROADMAP.md` |
-| UX/原型 | 说明用户路径、页面状态、错误反馈、原型和可用性要求 | `UX_SPEC.md`、`PROTOTYPE.md`、`USER_FLOW.md` |
-| 架构设计 | 说明模块、数据、API、AI 工具调用、权限边界和 ADR | `workbench/architecture/` |
-| 交付计划 | 说明版本范围、任务拆分、验证、回滚和发布风险 | `workbench/delivery/` |
-| 功能工作包 | 把每个重要功能拆成规格、澄清、设计、计划、任务、验证、审查 | `workbench/features/<feature>/` |
-| 质量门 | 把测试、lint、build、runtime smoke、scorecard 接成可运行检查 | `workbench/quality/` |
-| 证据审计 | 检查证据是否完整、状态是否一致、是否有硬阻塞 | `workbench/scorecard/` |
-| 失败复盘 | 把重复失败沉淀成模板、测试、质量门、CI、hook 或审查规则 | `workbench/feedback/` |
+关键文件：
 
-## 推荐工作流
-
-从 0 到 1 的完整流程是：
-
-```text
-项目发现
--> 产品简报
--> PRD
--> UX/原型
--> 架构设计
--> 交付计划
--> 功能包开发
--> 验证审查
--> 证据审计
--> 迭代复盘
-```
-
-这不是固定瀑布流程。工作台按风险和影响面选择流程强度：
-
-| 场景 | 推荐强度 | 处理方式 |
-| --- | --- | --- |
-| 文案、低风险单文件修复 | 轻量 | 可以不建完整功能包，但必须说明改动、验证和风险。 |
-| 普通用户可见功能 | 中等 | 建功能包，至少完成 `SPEC`、`CLARIFY`、`PLAN`、`VERIFY`。 |
-| 跨模块、权限、数据、AI 自动生效、数据库、生产发布 | 重量 | 完整功能包、质量门、review，必要时独立审查。 |
-| 事故、安全漏洞、数据损坏 | 紧急 | 可先止血，事后必须补验证、审查、复盘和防复发自动化。 |
-
-如果项目已经写了一部分但需求变了，不是直接改代码。先更新对应事实源：
-
-| 变化 | 先更新 |
+| 文件 | 作用 |
 | --- | --- |
-| 项目目标、用户、第一版范围变化 | `PROJECT_INTAKE.md`、产品、UX、架构、交付计划 |
-| 当前功能需求变化 | 功能包 `SPEC.md`、`CLARIFY.md` |
-| 技术方案变化 | `DESIGN.md`、`DECISIONS.md`、必要时补 ADR |
-| 验收标准变化 | `SPEC.md`、`VERIFY.md`、测试和质量门 |
-| AI 实现偏离计划 | `IMPLEMENTATION_NOTES.md`、`DECISIONS.md`、`VERIFY.md` |
+| `PROJECT_INTAKE.md` | 确认项目目标、用户、范围、数据、权限、AI 边界和验收。 |
+| `PROJECT_STATE.md` | 当前项目事实索引：阶段、active feature、技术栈、关键命令、约束和风险。 |
+| `workbench/product/PRD.md` | 长期产品需求基线，不在每个小变更里重复复制。 |
+| `workbench/design/UX_SPEC.md` | 长期 UX、页面状态、交互和可用性约束。 |
+| `workbench/architecture/` | 架构、API、数据、AI 工具边界和 ADR。 |
+| `workbench/delivery/TRACEABILITY.md` | 需求、UX、API、AI、实现和验证的追踪矩阵。 |
+| `workbench/delivery/CHANGE_LOG.md` | `light` 变更的机器可读索引。 |
+| `workbench/runtime/WORKFLOW_STATE.schema.json` | 运行时状态 schema；实际状态由脚本生成到 `.workbench-validation/workflow-state.json`。 |
+| `workbench/features/<feature>/FEATURE_STATUS.json` | 功能包机器状态索引，必须由脚本生成或被 quality gate 交叉校验。 |
+| `workbench/quality/quality_gate.py` | 本地硬判定入口，检查 diff、状态、证据、review 和 marker 新鲜度。 |
+| `.workbench-validation/` | 当前机器生成报告区，不放长期人工维护解释。 |
+| `workbench/feedback/FAILURE_LOG.md` | 重复失败、review 漏检、质量门缺口的项目级复盘位置。 |
 
-## 每个流程靠什么保证
+## 主流程
 
-| 流程 | 主要保证 | 不能靠什么保证 |
+2.0.0 的工作流是状态机：
+
+```text
+CLASSIFY
+-> BASELINE_CHECK
+-> CHANGE
+-> IMPACT
+-> ROUTE
+-> PLAN
+-> IMPLEMENT
+-> VERIFY
+-> REVIEW
+-> GATE
+-> LEARN
+-> DONE
+```
+
+每一步的判断：
+
+| 阶段 | 需要回答的问题 |
+| --- | --- |
+| `CLASSIFY` | 这是什么任务、风险多高、该走 `light`、`standard` 还是 `strict`。 |
+| `BASELINE_CHECK` | 项目 intake、产品、UX、架构、交付基线是否足够支撑本次变更。 |
+| `CHANGE` | 为什么改、改什么、不改什么、做到什么算完成。 |
+| `IMPACT` | 是否影响 PRD、UX、API、数据、AI、权限、测试、发布和追踪矩阵。 |
+| `ROUTE` | 按风险和影响面选择流程强度。 |
+| `PLAN` | 计划改哪些文件、怎么验证、风险和回滚是什么。 |
+| `IMPLEMENT` | 只实现计划覆盖范围。 |
+| `VERIFY` | 留下命令、截图、日志、测试、eval、CI 或人工验收证据。 |
+| `REVIEW` | 检查 P0/P1、需求偏移、权限、安全、架构、测试和回滚风险。 |
+| `GATE` | 运行质量门，写入绑定当前 diff 的 marker。 |
+| `LEARN` | 如果出现失败或重复问题，判断是否升级模板、测试、质量门、hook 或 CI。 |
+
+## 流程强度
+
+2.0.0 不要求所有改动都走完整 SDD。它按风险和影响面分三档：
+
+| Profile | 场景 | 最低证据 |
 | --- | --- | --- |
-| 项目预处理 | 状态字段、open blocker、人工确认 | AI 说“我理解了” |
-| 产品需求 | 用户故事、验收标准、非目标、变更记录 | 一句模糊需求 |
-| UX/原型 | 用户路径、页面状态、错误路径、可访问性要求 | 只说“做得好看” |
-| 架构设计 | 模块边界、数据流、API/AI 边界、ADR、回滚策略 | 代码写完后再解释 |
-| 功能开发 | 功能工作包的阶段证据 | 一次性大改 |
-| 验证 | 测试、lint、build、runtime smoke、质量门、人工验收 | 最终回复里的“已测试” |
-| 审查 | P0/P1/P2 风险、独立审查、审查证据 | 只看代码风格 |
-| 证据审计 | `decision`、blocker、confidence、校准 | 总分好看 |
-| 复盘 | `FAILURE_LOG.md`、`CALIBRATION.md`、模板/测试/CI/hook 改进 | 聊天里口头记住 |
+| `light` | 小文案、小样式、低风险单点 bug | `workbench/delivery/CHANGE_LOG.md` 中有机器可读记录，并有最小验证证据。 |
+| `standard` | 普通功能、单模块业务改动 | 功能包包含 `CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md`、`PLAN.md`、`TASKS.md`、`VERIFY.md`、`REVIEW.md`、`FEATURE_STATUS.json`。 |
+| `strict` | 跨模块、数据、权限、API、AI/RAG/Agent、架构、发布、生产风险 | 完整功能包、追踪矩阵更新或豁免、质量门、独立审查或 CI 证据。 |
 
-Markdown 规则只是说明。真正不能跳过的要求，要尽量落到脚本、测试、pre-commit、CI、Codex hook 或质量门里。
+硬触发 `strict` 的例子：
 
-## 评分机制为什么这样设计
+- 数据结构、迁移、批量数据修改。
+- 登录、认证、授权、角色、租户、隐私、密钥。
+- API 合约、SDK、消息结构、外部集成。
+- AI 输出影响用户权益，RAG 数据源变化，Agent 工具调用变化。
+- CI/CD、部署、环境变量、基础设施、生产发布。
+- 不可逆删除、覆盖或安全风险。
 
-`workbench/scorecard/` 不是质量裁判。它只审计：
+## 需求变化怎么处理
 
-```text
-证据是否完整
-状态是否一致
-是否存在硬阻塞
-评分口径是否经过校准
-```
+项目已经写了一部分时，需求变化不要求全量重写所有文档。正确做法是先写或更新 `IMPACT_ANALYSIS.md`，再只更新被影响的基线。
 
-它不证明产品目标正确、架构最优、UI 好用、代码无 bug、AI eval 覆盖充分或可以上线。
-
-结果必须按这个顺序看：
-
-```text
-decision
--> blockers
--> confidence
--> component floors
--> reference score
-```
-
-只看总分是错误用法。只要有硬阻塞，参考分再高也不能交付。
-
-默认参考权重是未校准前的启动口径，不是统计结论：
-
-| 维度 | 权重 | 为什么这样放 |
-| --- | ---: | --- |
-| 项目预处理 | 15 | 先防止方向错、用户错、范围错、权限和数据边界错。 |
-| 产品需求 | 15 | PRD 和验收标准决定功能是否做对。 |
-| 交互/原型 | 10 | 用户路径重要，但不同项目差异大，不能压过需求和架构。 |
-| 架构设计 | 15 | 模块、数据、API、AI 边界错误会带来高返工和高风险。 |
-| 交付计划 | 10 | 版本、任务、回滚重要，但不是当前质量的唯一证据。 |
-| 功能工作包 | 20 | AI 真实开发发生在这里，必须最高权重检查需求到验证的证据链。 |
-| 验证硬门禁 | 10 | 验证失败应直接进入 blocker，不靠软分数慢慢扣。 |
-| 反馈闭环 | 5 | 反馈用于长期改进，不能弥补当前需求、设计或验证缺口。 |
-
-这个设计的核心是三条：
-
-1. 高风险失败不能靠低风险文档补分。
-2. 验证失败不能靠总分绕过。
-3. 反馈复盘不能掩盖当前交付证据不足。
-
-减少 AI 幻觉的办法不是“相信分数”，而是四层约束：
-
-| 约束 | 作用 |
+| 变化 | 优先更新 |
 | --- | --- |
-| 硬阻塞 | open blocker、质量门失败、高风险未确认时直接阻断。 |
-| 组件下限 | 防止总分掩盖产品、架构、验证等单项短板。 |
-| 可信度 | 高分低可信度必须人工看风险，不能当作通过。 |
-| 校准记录 | 用真实功能包记录 false positive、false negative，再调整模板、脚本、权重或 blocker。 |
+| 项目目标、用户、第一版范围变化 | `PROJECT_INTAKE.md`、`PROJECT_STATE.md`、product/design/architecture/delivery 中受影响文件 |
+| 当前功能需求变化 | 功能包 `CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md`、`SPEC.md` |
+| UX 或原型变化 | `workbench/design/` 或功能级 `DESIGN.md` |
+| API、数据、AI 工具边界变化 | `workbench/architecture/`、功能级 `DESIGN.md`、ADR |
+| 验收标准变化 | `SPEC.md`、`VERIFY.md`、测试、quality gate |
+| 实现偏离计划 | `DECISIONS.md`、`IMPLEMENTATION_NOTES.md`、`VERIFY.md`、必要时 `FAILURE_LOG.md` |
 
-完整评分规则见 [WORKFLOW_AND_SCORECARD.md](plugins/codex-workbench/docs/WORKFLOW_AND_SCORECARD.md) 和项目模板里的 `workbench/scorecard/RUBRIC.md`。
+这样做的目的，是让长期基线继续约束项目，又避免每次小改都同步一堆重复文档。
 
-## 迭代升级怎么做
+## 质量门、评分和证据
 
-工作台升级不是“觉得哪里不顺就改”。升级必须从证据开始。
+`quality_gate.py` 是硬判定入口，不是评分器。它至少检查：
 
-Codex Workbench 把迭代分成三层：
+- `PROJECT_INTAKE.md` 不是 draft，且无 open blocker。
+- 有受控代码或受控资产 diff 时，存在关联功能包或有效 `light` 变更记录。
+- `standard` / `strict` 有 `IMPACT_ANALYSIS.md`。
+- 未通过 `PLAN.md` / `TASKS.md` 时不能进入实现。
+- `VERIFY.md` 有真实验证证据。
+- `REVIEW.md` 没有未解决 P0/P1。
+- `strict` 更新 `TRACEABILITY.md`，或明确说明不受影响。
+- `FEATURE_STATUS.json`、Markdown、git diff、证据文件互相一致。
+- 旧 `quality-gate-ok.json` 在 diff、active feature、证据或关键基线变化后失效。
 
-| 层级 | 什么时候发生 | 证据放哪里 | 结果 |
-| --- | --- | --- | --- |
-| 项目迭代 | 需求变化、功能返工、验证失败、用户反馈 | 项目内 `workbench/features/`、`workbench/feedback/`、`workbench/scorecard/CALIBRATION.md` | 更新项目事实、功能包、测试、review 或质量门 |
-| 工作台机制升级 | 同类失败重复出现，说明模板、脚本、质量门或审查规则有缺口 | 插件内 `docs/maintenance/IMPROVEMENT_LOG.md`、`FAILURE_PATTERNS.md`、ADR | 修改模板、脚本、质量门、CI、hook 或文档 |
-| 插件版本发布 | 升级会影响别人安装后的行为 | `plugin.json`、README、package-check 报告、维护日志 | 发布 patch/minor/major 版本 |
-
-升级闭环：
+通过后写入：
 
 ```text
-收集证据
--> 分类失败
--> 判断是项目个案还是工作台机制缺陷
--> 修改对应模板、脚本、质量门、CI、hook 或文档
--> 运行验证
--> 写维护日志
--> 判断是否发版本
+.workbench-validation/quality-gate-ok.json
+.workbench-validation/workflow-state.json
 ```
 
-版本规则：
+marker 必须绑定 `git_head`、`diff_hash`、`feature_id`、`commands_run`、`created_at` 和 `branch_protection` 状态。`branch_protection` 只有通过 GitHub API、`gh` 或 CI 环境确认后才能写 `verified`；否则只能写 `unverified`。
 
-| 类型 | 什么时候用 |
-| --- | --- |
-| `PATCH` | 修文档、模板文字、脚本 bug，不改变公开工作流。 |
-| `MINOR` | 新增向后兼容能力、模板、文档或检查项。 |
-| `MAJOR` | 改变公开工作流、生成文件契约、命令行为或兼容性。 |
+`scorecard` 只做证据成熟度审计，不做最终放行：
 
-完整升级规则见 [ITERATION_UPGRADE.md](plugins/codex-workbench/docs/ITERATION_UPGRADE.md)。
+| 机制 | 用途 | 是否能单独放行 |
+| --- | --- | --- |
+| `quality_gate.py` | 检查 blocker、状态、diff、证据和 marker | 可以作为本地 gate |
+| CI status check | 合并前远程门禁 | 可以作为远程 gate |
+| `SCORECARD.md` / `scorecard.py` | 发现证据成熟度、趋势和校准问题 | 不能单独放行 |
+| 人工或独立 review | 判断产品、UX、架构、安全和 AI eval 的语义质量 | 高风险时必须参与 |
+
+正确顺序是：
+
+```text
+先看 blocker
+-> 再看验证证据
+-> 再看 review P0/P1
+-> 再看 gate / CI
+-> 最后才看 scorecard 趋势
+```
+
+## 怎么防止 AI 跳过
+
+工作台不承诺“AI 永远不会跳流程”。更准确的工程表达是：
+
+```text
+只要触碰受控范围，跳流程、漏验证、乱改范围或证据不足，应被本地 gate、CI 或 branch protection 暴露；
+hook 负责前置提醒和粗拦截；
+quality gate 与 CI 负责最终判定；
+review 和 failure log 负责把漏网问题沉淀成下一轮机制升级。
+```
+
+Hook 边界：
+
+- `UserPromptSubmit`：注入会话职责、流程提醒和搜索路由。
+- `PreToolUse`：粗拦截高风险命令、危险删除、绕过审批、绕过 Git hooks、未进入实现阶段就改受控代码。
+- `PermissionRequest`：拦截绕过沙盒、危险权限和破坏性命令。
+- `Stop`：发现本轮有项目改动但质量门缺失时提醒或阻断收尾。
+
+Hook 不是完整安全边界。最终硬判定必须落到 `runtime_gate.py`、`quality_gate.py`、pre-commit、CI 或 branch protection。
+
+用户明确要求安全删除时，不应被永久阻断；应走路径解析、范围确认、`BYPASS_LOG.md` 记录、过期时间和 follow-up。
 
 ## 安装
 
-把仓库添加为 Codex marketplace：
+添加 marketplace：
 
 ```bash
 codex plugin marketplace add Hapibit/codex-workbench --ref main
@@ -226,11 +241,92 @@ codex plugin marketplace add Hapibit/codex-workbench --ref main
 codex plugin add codex-workbench --marketplace hapibit
 ```
 
-默认安装 `main`，也就是当前最新版本。只有在复现实验、回滚问题或锁定生产环境时，才建议固定 tag：
+默认安装 `main`，也就是仓库当前最新版本。只有复现实验、回滚问题或锁定环境时才建议固定 tag：
 
 ```bash
-codex plugin marketplace add Hapibit/codex-workbench --ref v1.2.0
+codex plugin marketplace add Hapibit/codex-workbench --ref v2.0.0
 codex plugin add codex-workbench --marketplace hapibit
+```
+
+## 第一次使用
+
+进入项目根目录，对 Codex 说：
+
+```text
+Use Codex Workbench to set up this project's AI workbench.
+```
+
+检查下一步：
+
+```text
+Use Codex Workbench to tell me the next step for this project.
+```
+
+创建功能包：
+
+```text
+Use Codex Workbench to create a feature work package named <feature-name>.
+```
+
+审计工作台：
+
+```text
+Use Codex Workbench to audit this project workbench.
+```
+
+## 使用者需要自己配置什么
+
+插件不会分发作者的私人环境。使用者仍然要自己配置：
+
+- Codex 安装和登录。
+- 自己的 `~/.codex/config.toml`。
+- MCP servers、API keys 和凭证。
+- GitHub、Figma、Jenkins、OpenAI 等账号权限。
+- Node、Java、Maven、Docker、Python、浏览器、draw.io 等本机工具链。
+- 项目的环境变量、本地依赖、测试、lint、build 和 CI 命令。
+- hook trust、审批策略和权限决策。
+
+## 可选用户工作台
+
+项目工作台默认写进具体项目仓库。用户工作台写进 `~/.codex/`，会影响所有项目，必须由使用者显式安装。
+
+预览：
+
+```bash
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py user-workbench
+```
+
+确认后写入：
+
+```bash
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py user-workbench --apply
+```
+
+覆盖已有用户配置需要显式 `--force`，并会生成备份：
+
+```bash
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py user-workbench --apply --force
+```
+
+说明见 [USER_WORKBENCH.md](plugins/codex-workbench/docs/USER_WORKBENCH.md)。
+
+## 可选增强能力
+
+Codex Workbench 本身可以独立使用。其他 skill、MCP 或第三方工具只是增强包，不是入门前置条件。
+
+| 任务 | 可选增强 |
+| --- | --- |
+| UI、Figma、前端还原 | UI/Figma 类 skill |
+| ER 图、流程图、架构图、UML | diagram/draw.io 类 skill |
+| 单元测试、接口测试、Playwright、AI 对话测试 | testing 类 skill |
+| Jenkins、GitHub Actions、CI/CD | CI/Jenkins 类 skill |
+| README、Word、论文、PPT、技术文档 | docs 类 skill |
+| RAG、Agent、LLM eval、安全治理 | AI governance 类 skill |
+
+查看本机增强包：
+
+```bash
+python plugins/codex-workbench/skills/codex-workbench/scripts/check_enhancements.py --query "我要做 UI/Figma 和测试"
 ```
 
 ## 仓库结构
@@ -251,131 +347,43 @@ plugins/codex-workbench/
 
 | 文档 | 读者 | 作用 |
 | --- | --- | --- |
-| `plugins/codex-workbench/README.md` | 使用者 | 安装、快速开始、生成内容、边界 |
-| `plugins/codex-workbench/docs/WORKFLOW_AND_SCORECARD.md` | 使用者、维护者 | 完整解释流程、评分、权重、校准、迭代 |
-| `plugins/codex-workbench/docs/ITERATION_UPGRADE.md` | 使用者、维护者 | 解释项目迭代、工作台升级、版本发布的闭环 |
-| `plugins/codex-workbench/docs/USER_WORKBENCH.md` | 想配置全局工作台的人 | 解释用户工作台模板和安装方式 |
-| `plugins/codex-workbench/docs/maintenance/` | 维护者 | 记录工作台自身升级证据、失败模式和 ADR |
+| `plugins/codex-workbench/README.md` | 使用者 | 插件安装、快速开始、生成内容、边界 |
+| `plugins/codex-workbench/docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md` | 使用者、维护者 | 2.0.0 架构设计基线 |
+| `plugins/codex-workbench/docs/WORKFLOW_AND_SCORECARD.md` | 使用者、维护者 | 流程、scorecard 边界、校准和证据审计 |
+| `plugins/codex-workbench/docs/ITERATION_UPGRADE.md` | 使用者、维护者 | 项目迭代、工作台升级、版本发布闭环 |
+| `plugins/codex-workbench/docs/USER_WORKBENCH.md` | 想配置全局工作台的人 | 用户工作台模板和安装方式 |
+| `plugins/codex-workbench/docs/maintenance/` | 维护者 | 工作台自身升级证据、失败模式和 ADR |
 
-## 常用入口
-
-在项目根目录打开 Codex，然后说：
-
-```text
-Use Codex Workbench to set up this project's AI workbench.
-```
-
-检查下一步：
-
-```text
-Use Codex Workbench to tell me the next step for this project.
-```
-
-审计已有工作台：
-
-```text
-Use Codex Workbench to audit this project workbench.
-```
-
-创建功能工作包：
-
-```text
-Use Codex Workbench to create a feature work package named <feature-name>.
-```
-
-## 用户还要自己配置什么
-
-这个插件不会替你登录第三方服务，也不会分发作者的私人配置。使用者仍然要自己配置：
-
-- Codex 安装和登录。
-- 自己的 `~/.codex/config.toml`。
-- MCP servers 和凭证。
-- GitHub、Figma、Jenkins、OpenAI、Google 等账号权限。
-- Node、Java、Maven、Docker、Python、浏览器、draw.io 等项目工具链。
-- 项目的环境变量、API keys 和本地依赖。
-- hook 信任、审批策略和权限决策。
-- 项目自己的测试、lint、类型检查、构建和 CI 命令。
-
-## 可选用户工作台
-
-项目工作台默认写进具体项目仓库。用户工作台写进 `~/.codex/`，会影响所有项目，因此必须由使用者显式安装。
-
-预览：
-
-```bash
-python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py user-workbench
-```
-
-确认后写入：
-
-```bash
-python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py user-workbench --apply
-```
-
-说明见 [USER_WORKBENCH.md](plugins/codex-workbench/docs/USER_WORKBENCH.md)。
-
-## 可选增强能力
-
-Codex Workbench 本身可以独立使用。其他 skill、MCP 或第三方工具只是在具体任务中增强能力，不是入门门槛。
-
-| 任务 | 可选增强 |
-| --- | --- |
-| UI、Figma、前端还原 | UI/Figma 类 skill |
-| ER 图、流程图、架构图、UML | diagram/draw.io 类 skill |
-| 单元测试、接口测试、Playwright、AI 对话测试 | testing 类 skill |
-| Jenkins、GitHub Actions、CI/CD | CI/Jenkins 类 skill |
-| README、Word、论文、PPT、技术文档 | docs 类 skill |
-| RAG、Agent、LLM eval、安全治理 | AI governance 类 skill |
-
-## 维护与发布
+## 维护和发布
 
 普通使用者可以跳过这一节。
-
-维护、打包和发布规则在：
-
-```text
-plugins/codex-workbench/packaging-manifest.json
-plugins/codex-workbench/docs/maintenance/
-plugins/codex-workbench/skills/codex-workbench/
-```
 
 发布前至少运行：
 
 ```bash
-python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py package-check --plugin plugins/codex-workbench --expected-version 1.2.0 --write-report
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py self-test
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py golden-test
+python plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py package-check --plugin plugins/codex-workbench --expected-version 2.0.0 --write-report
 ```
 
-发布包应该只暴露一个可见 skill：
+发布候选必须满足：
 
-```text
-codex-workbench
-```
-
-维护证据放在：
-
-```text
-plugins/codex-workbench/docs/maintenance/
-```
-
-机器生成报告放在：
-
-```text
-plugins/codex-workbench/.workbench-validation/
-```
-
-`.workbench-validation/` 只放机器报告，不放长期人工维护解释。
+- `.codex-plugin/plugin.json` 版本是 `2.0.0`。
+- 只暴露一个可见 skill：`codex-workbench`。
+- 新增模板、schema、runtime、quality、docs 都被打包。
+- `.workbench-validation/`、cache、`__pycache__`、个人路径和内部备份不进入发布包。
+- 维护证据写入 `docs/maintenance/IMPROVEMENT_LOG.md`，机器报告写入 `.workbench-validation/`。
 
 ## 参考资料
 
-- OpenAI Codex best practices: https://developers.openai.com/codex/learn/best-practices
 - OpenAI Codex customization: https://developers.openai.com/codex/concepts/customization
 - OpenAI Codex skills: https://developers.openai.com/codex/skills
 - OpenAI Codex plugins: https://developers.openai.com/codex/plugins/build
-- OpenAI agent improvement loop: https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop
+- OpenAI Codex hooks: https://developers.openai.com/codex/hooks
 - OpenAI Codex iterative repair loop: https://developers.openai.com/cookbook/examples/codex/build_iterative_repair_loops_with_codex
-- SonarQube quality gates: https://docs.sonarsource.com/sonarqube-server/quality-standards-administration/managing-quality-gates/introduction-to-quality-gates
-- Google SRE postmortem culture: https://sre.google/workbook/postmortem-culture
-- Diataxis: https://diataxis.fr/
-- GitHub README: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes
-- Rubric design: https://teaching.unl.edu/resources/grading-feedback/design-effective-rubrics
+- GitHub Spec Kit: https://github.blog/ai-and-ml/generative-ai/spec-driven-development-with-ai-get-started-with-a-new-open-source-toolkit
+- Git hooks: https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks
+- GitHub protected branches: https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches
+- GitHub status checks: https://docs.github.com/articles/about-status-checks
+- NASA Requirements Management: https://www.nasa.gov/reference/6-2-requirements-management/
 - Semantic Versioning: https://semver.org

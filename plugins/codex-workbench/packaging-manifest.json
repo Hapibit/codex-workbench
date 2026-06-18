@@ -4,6 +4,7 @@
     ".codex-plugin/plugin.json",
     "README.md",
     "hooks/**",
+    "docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md",
     "docs/WORKFLOW_AND_SCORECARD.md",
     "docs/ITERATION_UPGRADE.md",
     "docs/USER_WORKBENCH.md",

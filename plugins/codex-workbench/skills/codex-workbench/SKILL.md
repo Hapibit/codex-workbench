@@ -18,15 +18,21 @@ Use a bilingual split instead of making every prompt either English or Chinese:
 
 ## Mental Model
 
-The workbench has one simple path. Keep the public path stable even if the internal skills or tools change:
+The workbench has one public path. Keep the public path stable even if the internal scripts, hooks, or optional enhancement skills change:
 
 ```text
 1. Understand the project
-2. Establish product, UX, architecture, and delivery facts when the project is 0-to-1 or materially changing
-3. Create or update the project workbench
-4. Use feature work packages for meaningful changes
-5. Run scorecard, quality gates, and review
-6. Feed requirement changes, AI failures, and review misses back into specs, templates, tests, gates, scorecards, or automation
+2. Establish project baseline facts when the project is 0-to-1 or materially changing
+3. Route each meaningful change through CHANGE -> IMPACT -> PLAN -> IMPLEMENT -> VERIFY -> REVIEW -> GATE -> LEARN
+4. Use `light`, `standard`, or `strict` based on risk and impact
+5. Let Markdown explain decisions, generated JSON index state, and quality/runtime gates judge current evidence
+6. Feed repeated failures back into templates, tests, quality gates, hooks, CI, scorecards, or review rules
+```
+
+The 2.0.0 state machine is:
+
+```text
+CLASSIFY -> BASELINE_CHECK -> CHANGE -> IMPACT -> ROUTE -> PLAN -> IMPLEMENT -> VERIFY -> REVIEW -> GATE -> LEARN -> DONE
 ```
 
 ## Internal Engine
@@ -64,9 +70,9 @@ When the user gives a project or workbench request, route internally:
 | Product planning, PRD, first-version scope, user stories, acceptance criteria, roadmap | `workbench/product/PRODUCT_BRIEF.md`, `PRD.md`, `ROADMAP.md` | Produce or update product facts, acceptance criteria, non-goals, and version scope before feature work. | `technical-doc-writer`, `project-architect` |
 | UX, prototype, user flow, page states, error/empty/loading/permission states | `workbench/design/UX_SPEC.md`, `PROTOTYPE.md`, `USER_FLOW.md` | Produce user flow, UI states, error/empty/loading behavior, and prototype evidence before user-visible implementation. | `ui-ux-pro-max`, `frontend-design`, `figma`, `figma-use`, `figma-generate-design` |
 | Architecture, data model, API design, AI/tool boundaries, ADR | `workbench/architecture/ARCHITECTURE.md`, `DATA_MODEL.md`, `API_DESIGN.md`, `AI_DESIGN.md`, `adr/` | Produce module, data, API, AI-tool, permission, and rollback boundaries before cross-module or high-risk work. | `project-architect`, `enterprise-ai-app-lifecycle`, `drawio-skill` |
-| Delivery planning, iteration plan, task breakdown, rollback | `workbench/delivery/RELEASE_PLAN.md`, `ITERATION_PLAN.md`, `TASK_BREAKDOWN.md` | Produce iteration scope, task split, validation plan, and rollback notes before scheduling meaningful implementation. | `technical-doc-writer`, `ci-cd-integration` |
-| Feature implementation | `scripts/workbench.py feature`, `workbench/features/<feature-name>/` | Create or update the feature package, resolve open blockers, then implement only the agreed scope. | language/framework/test specialist skills as needed |
-| Verification, review, scorecard, failure loop | `workbench/quality/`, `workbench/runtime/`, `workbench/scorecard/`, `workbench/review/`, `workbench/feedback/` | Run deterministic checks when available, write verification evidence, review risks, and record repeated failures for mechanism upgrades. | review, testing, CI, security, AI eval skills as needed |
+| Delivery planning, iteration plan, task breakdown, traceability, rollback | `workbench/delivery/TRACEABILITY.md`, `CHANGE_LOG.md`, `RELEASE_PLAN.md`, `ITERATION_PLAN.md`, `TASK_BREAKDOWN.md`, `RELEASE_CHECKLIST.md` | Produce iteration scope, task split, validation plan, traceability, and rollback notes before scheduling meaningful implementation. | `technical-doc-writer`, `ci-cd-integration` |
+| Feature implementation or requirement change | `scripts/workbench.py feature`, `workbench/features/<feature-name>/` | Create or update the feature package, complete `CHANGE_REQUEST.md` and `IMPACT_ANALYSIS.md`, then implement only the planned scope. | language/framework/test specialist skills as needed |
+| Verification, review, runtime/quality gate, scorecard, failure loop | `workbench/quality/`, `workbench/runtime/`, `workbench/scorecard/`, `workbench/review/`, `workbench/feedback/` | Generate current workflow state, write verification evidence, review risks, run quality gate, and record repeated failures for mechanism upgrades. | review, testing, CI, security, AI eval skills as needed |
 
 Routing rules:
 
@@ -83,11 +89,12 @@ For every workbench task, follow this loop:
 
 1. Identify the active project path and current session boundary. If the user says this session is for workbench configuration, keep that boundary for later short commands such as "start", "continue", "plan", "optimize", "install", "publish", or "review"; do not advance business-project code unless the user explicitly switches scope.
 2. Inspect existing workbench state before choosing a stage: `PROJECT_INTAKE.md`, `AGENTS.md`, `WORKBENCH.md`, `FEATURE_WORKFLOW.md`, `workbench/features/`, `workbench/scorecard/`, and `.workbench-validation/` when present.
-3. Select exactly one primary stage from the router table. Load only the reference files needed for that stage.
-4. State blockers before edits. If users, scope, acceptance, data, permission, AI boundaries, or environment are unclear and materially affect the route, ask the minimum blocker questions.
-5. Produce or update the stage artifact, then validate with the bundled script or project quality gate when available.
-6. Report the next concrete step and any validation gap. Do not claim the workbench is a hard gate unless a script, hook, CI job, test, or quality gate enforces it.
-7. If the user points out skipped rules, stage mismatch, or invented workbench layers, pause and perform deviation review before continuing.
+3. Classify the task against the 2.0.0 state machine and choose `light`, `standard`, or `strict`.
+4. Select exactly one primary route from the router table. Load only the reference files needed for that route.
+5. State blockers before edits. If users, scope, acceptance, data, permission, AI boundaries, environment, or traceability impact are unclear and materially affect the route, ask the minimum blocker questions.
+6. Produce or update the stage artifact, then validate with the bundled script or project quality gate when available.
+7. Report the next concrete step and any validation gap. Do not claim the workbench is a hard gate unless a script, hook, CI job, test, or quality gate enforces it.
+8. If the user points out skipped rules, stage mismatch, or invented workbench layers, pause and perform deviation review before continuing.
 
 Keep `SKILL.md` lean. Move detailed explanations to `references/`, deterministic behavior to `scripts/`, and reusable files to `assets/`.
 
@@ -96,7 +103,7 @@ Keep `SKILL.md` lean. Move detailed explanations to `references/`, deterministic
 Separate public workbench concepts from internal implementation tools:
 
 - Public concepts: project intake, project workbench, feature work package, quality gate, runtime check, independent review, audit.
-- 0-to-1 concepts: product brief, PRD, UX spec, prototype, user flow, architecture, data model, API design, AI design, delivery plan, scorecard, iteration log, AI effectiveness.
+- 0-to-1 concepts: product brief, PRD, UX spec, prototype, user flow, architecture, data model, API design, AI design, traceability, change log, delivery plan, scorecard, iteration log, AI effectiveness.
 - Internal tools: bundled scripts, templates, references, optional specialist skills, MCP servers.
 - Generated project files should mostly describe public concepts and project-local commands, not require users to know internal skill names.
 - If an internal tool name is needed, keep it in plugin/skill docs or maintainer instructions, not as a prerequisite in project-local docs.
@@ -142,9 +149,12 @@ Expose simple commands and artifacts:
 
 - project intake,
 - product/UX/architecture/delivery facts,
+- change request and impact analysis,
+- traceability,
 - project workbench,
 - feature work package,
 - quality gate,
+- runtime state,
 - scorecard,
 - review.
 

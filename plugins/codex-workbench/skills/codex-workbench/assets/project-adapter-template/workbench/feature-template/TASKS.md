@@ -20,7 +20,7 @@ completed_at: unconfirmed
 
 ## 任务清单
 
-- [ ] 1. 确认 SPEC、CLARIFY、DESIGN 和 PLAN 已完成，未确认问题已处理。
+- [ ] 1. 确认 CHANGE_REQUEST、IMPACT_ANALYSIS、SPEC、DESIGN 和 PLAN 已完成，未确认问题已处理。
   - 验证：
 
 - [ ] 2. 修改数据模型、类型或接口契约。

@@ -157,7 +157,7 @@ BLOCKED
 - 质量门没有调用 `workbench/scorecard/scorecard.py` 生成证据审计报告。
 - `SCORECARD.md` 结构缺失，无法记录语义复核和架构复核。
 - 功能工作包缺文件、状态非法、阶段顺序倒置或 complete 后仍有未勾选任务。
-- `current_stage` 已进入后续阶段，但前置 SPEC、CLARIFY、DESIGN、PLAN、TASKS、VERIFY 或 REVIEW 没有对应通过证据。
+- `current_stage` 已进入后续阶段，但前置 CHANGE_REQUEST、IMPACT_ANALYSIS、SPEC、DESIGN、PLAN、TASKS、VERIFY 或 REVIEW 没有对应通过证据。
 - 高风险权限、数据、生产、AI 自动生效变更缺少验证或人工确认。
 
 ## 人工/AI 语义复核

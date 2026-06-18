@@ -26,7 +26,7 @@ verification_commands:
 1. 读取 `AGENTS.md`、`PROJECT_INTAKE.md`、`WORKBENCH.md`、`REVIEW.md`、`PRODUCT_BASELINE.md`、`FEATURE_WORKFLOW.md` 和本文件。
 2. 先用 `PROJECT_INTAKE.md` 明确项目目标、第一版范围、用户角色、数据所有权、权限边界、AI 使用边界和验收下限。
 3. 明确当前任务的目标、范围、验收标准、环境要求和回滚要求。
-4. 新功能、跨模块或高风险改动按 `FEATURE_WORKFLOW.md` 建立功能工作包，并先完成 SPEC/CLARIFY/PLAN/TASKS。
+4. 新功能、跨模块或高风险改动按 `FEATURE_WORKFLOW.md` 建立功能工作包，并先完成 CHANGE_REQUEST/IMPACT_ANALYSIS/SPEC/DESIGN/PLAN/TASKS。
 5. 先检查现有实现、测试、脚本、CI 和相关文档，再规划代码改动。
 6. 按项目已有结构和命名做最小可验证改动。
 7. 先跑最小可靠验证；跨模块、高风险或用户要求时扩大验证。
@@ -49,7 +49,7 @@ verification_commands:
 
 - Bugfix：先复现或定位失败行为；能自动化时补回归检查，再修复。
 - Feature：确认验收标准和影响面；至少覆盖主流程和一个关键失败/边界路径。
-- Feature package：新功能或高风险改动优先创建 `workbench/features/<feature-name>/`，填写 SPEC/CLARIFY/PLAN/TASKS/DECISIONS/CHECKLIST/VERIFY/REVIEW。
+- Feature package：新功能或高风险改动优先创建 `workbench/features/<feature-name>/`，填写 CHANGE_REQUEST/IMPACT_ANALYSIS/SPEC/DESIGN/PLAN/TASKS/DECISIONS/VERIFY/REVIEW/FEATURE_STATUS。
 - AI/RAG/Agent：定义输入样例、期望行为、禁止行为、允许来源/工具、评分标准、日志和隐私边界。
 - UI：实际浏览器检查桌面和移动端布局、控制台错误、横向溢出、文字裁切和核心交互。
 - Backend/API：检查契约兼容、授权和数据归属、错误响应、幂等性、持久化边界。

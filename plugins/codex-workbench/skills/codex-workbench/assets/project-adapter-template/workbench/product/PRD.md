@@ -33,5 +33,4 @@ updated_at: unconfirmed
 
 - 需求变化先改 PRD，再更新 `UX_SPEC.md`、`ARCHITECTURE.md`、`workbench/features/<feature-name>/SPEC.md`。
 - 如果需求变化影响已实现功能，必须在对应功能包 `CHANGELOG.md` 和 `VERIFY.md` 记录复测。
-- 如果需求无法明确，先进入 `CLARIFY.md`，不要让 AI 直接实现。
-
+- 如果需求无法明确，先更新 `CHANGE_REQUEST.md` 和 `IMPACT_ANALYSIS.md`，必要时向用户确认，不要让 AI 直接实现。

@@ -4,7 +4,7 @@ status: draft
 owner: project owner
 updated_at: unconfirmed
 
-本文件记录实体、关系、权限和迁移风险。涉及数据库 schema、批量数据、权限边界的改动最低按 L3 功能处理。
+本文件记录实体、关系、权限和迁移风险。涉及数据库 schema、批量数据、权限边界的改动最低按 `strict` 功能处理。
 
 ## 实体
 
@@ -28,4 +28,3 @@ updated_at: unconfirmed
 
 - schema 变化必须有回滚或兼容策略。
 - 数据迁移必须记录影响范围、备份、验证和失败处理。
-
