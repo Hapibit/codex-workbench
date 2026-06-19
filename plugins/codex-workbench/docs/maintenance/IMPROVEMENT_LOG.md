@@ -89,7 +89,7 @@
 
 - `hooks/workbench-hard-gate.ps1`
 - `skills/codex-workbench/scripts/workbench.py`
-- 个人 skill 镜像 `C:\Users\31973\.codex\skills\codex-workbench\scripts\workbench.py`
+- 本机个人 skill 镜像中的 `scripts/workbench.py`
 
 验证结果：
 
