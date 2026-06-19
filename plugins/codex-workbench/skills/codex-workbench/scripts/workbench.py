@@ -2411,6 +2411,15 @@ def hook_pretooluse_permission_decision(result: dict[str, Any]) -> str:
     return str(output.get("permissionDecision") or "")
 
 
+def normalize_hook_path(path_text: str) -> str:
+    if not path_text.strip():
+        return ""
+    try:
+        return str(Path(path_text).resolve()).replace("\\", "/").rstrip("/").lower()
+    except Exception:
+        return path_text.replace("\\", "/").rstrip("/").lower()
+
+
 def run_generated_adapter_smoke(
     root: Path,
     label: str,
@@ -3285,8 +3294,8 @@ def run_plugin_hook_golden_case() -> dict[str, Any]:
         assert_condition(stop_payload.get("decision") == "block", "hook golden: Stop should block dirty nested repo without quality-gate marker", failures)
         assert_condition("missing quality-gate-ok.json" in stop_reason, "hook golden: Stop block should mention missing quality-gate-ok.json", failures)
         stop_repo_root = str(stop_payload.get("repoRoot") or "")
-        normalized_stop_repo = stop_repo_root.replace("\\", "/").lower()
-        normalized_nested = str(nested).replace("\\", "/").lower()
+        normalized_stop_repo = normalize_hook_path(stop_repo_root)
+        normalized_nested = normalize_hook_path(str(nested))
         assert_condition(normalized_stop_repo == normalized_nested or normalized_nested in stop_reason.replace("\\", "/").lower(), "hook golden: Stop block should report the nested repo path", failures)
 
         marker_dir = nested / ".workbench-validation"
@@ -3374,6 +3383,13 @@ def run_plugin_hook_golden_case() -> dict[str, Any]:
             "preToolUseSmokeMarkerWriteDecision": hook_pretooluse_permission_decision(smoke_marker_write_result),
             "preToolUseSplitMarkerFakeGateDecision": hook_pretooluse_permission_decision(split_marker_fake_gate_result),
             "stopDecision": stop_payload.get("decision") if isinstance(stop_payload, dict) else None,
+            "stopRepoRoot": stop_repo_root,
+            "expectedNestedRepo": str(nested),
+            "normalizedStopRepo": normalized_stop_repo,
+            "normalizedExpectedNestedRepo": normalized_nested,
+            "stopReasonExcerpt": stop_reason[:300],
+            "stopStdoutExcerpt": str(stop_result.get("stdout") or "")[:300],
+            "stopStderrExcerpt": str(stop_result.get("stderr") or "")[:300],
             "forgedStopDecision": forged_stop_payload.get("decision") if isinstance(forged_stop_payload, dict) else None,
         }
 

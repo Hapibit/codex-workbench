@@ -32,6 +32,37 @@
 
 ## 记录
 
+### 2026-06-20 - 稳定 Windows CI hook golden-test 路径诊断
+
+问题：
+
+重新推送 `2.0.3` 后，远端 `windows-package-check` 仍在 `plugin-hook-hard-gate` 用例失败，失败断言仍是 `hook golden: Stop block should report the nested repo path`。本地同一用例通过，但 GitHub Actions 日志没有打印 `repoRoot`、期望 nested repo 路径或 hook 原始输出，导致无法判断 CI 中实际返回的是空值、外层 repo，还是路径格式差异。
+
+证据来源：
+
+- GitHub Actions：`windows-package-check / Run workbench golden-test` 失败，`stopDecision=block`、`forgedStopDecision=block`，但 nested repo path 断言失败。
+- 本地复现：`golden-test` 通过，Stop hook 返回 `repoRoot` 指向 nested repo；说明阻断语义正常，问题集中在 CI 断言诊断不足或路径规范化差异。
+
+决策：
+
+不改变 hook 阻断语义，不改 2.0.0 整体架构。只在 `golden-test` 中增加路径规范化 helper，并把 `stopRepoRoot`、`expectedNestedRepo`、规范化后的路径、`reason/stdout/stderr` 摘要写入用例结果。这样 CI 再失败时会直接暴露实际路径和值，而不是只给一句断言失败。
+
+变更文件：
+
+- `skills/codex-workbench/scripts/workbench.py`
+- 本机个人 skill 镜像中的 `scripts/workbench.py`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+
+验证结果：
+
+- `py -B skills/codex-workbench/scripts/workbench.py golden-test`：通过，`plugin-hook-hard-gate` 输出 `stopRepoRoot`、`expectedNestedRepo` 和规范化路径。
+- `py -B skills/codex-workbench/scripts/workbench.py doctor --plugin <plugin-root> --personal-skill <personal-skill>`：通过，P0/P1/P2/P3 均为 0。
+- `py -B skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --personal-skill <personal-skill> --expected-version 2.0.3 --strict-release`：通过，P0/P1/P2/P3 均为 0。
+
+后续动作：
+
+- 提交并推送后观察 GitHub Actions。如果 CI 仍失败，直接依据新增的 `stopRepoRoot` 与 `stopStdoutExcerpt` 判断是 hook 返回路径错误还是断言条件仍不兼容。
+
 ### 2026-06-20 - 发布 2.0.3 并补充 reader.md
 
 问题：
