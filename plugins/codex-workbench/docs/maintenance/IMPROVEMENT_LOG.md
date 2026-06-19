@@ -70,6 +70,37 @@
 
 - 发布 tag 前确认 staged 发布包文件会随版本提交一起进入 Git；不要把 `.workbench-validation/` 机器报告提交进发布包。
 
+### 2026-06-20 - 修复 Windows CI golden-test nested repo path 断言
+
+问题：
+
+`v2.0.3` 推送后，GitHub Actions 的 `windows-package-check` 在 `Run workbench golden-test` 阶段失败。失败用例是 `plugin-hook-hard-gate`，具体断言为 `hook golden: Stop block should report the nested repo path`。
+
+证据来源：
+
+- GitHub Actions 截图显示 `plugin-hook-hard-gate` 中 `stopDecision` 已经是 `block`，`forgedStopDecision` 也是 `block`，但 nested repo 路径断言失败。
+- 本地代码复查发现 golden-test 只从中文 `reason` 文本里匹配 nested repo 的完整绝对路径。该断言对 Windows CI runner 的路径格式和 PowerShell 输出细节过于敏感。
+
+决策：
+
+保持 Stop hook 的阻断语义不变，给 Stop block payload 增加机器可读的 `repoRoot` 字段；golden-test 优先校验 `repoRoot` 等于 nested repo 路径，同时保留 `reason` 包含 `missing quality-gate-ok.json` 的要求。这样仍能证明 hook 报告了被阻断的项目，但不把测试绑定到中文 reason 的绝对路径格式。
+
+变更文件：
+
+- `hooks/workbench-hard-gate.ps1`
+- `skills/codex-workbench/scripts/workbench.py`
+- 个人 skill 镜像 `C:\Users\31973\.codex\skills\codex-workbench\scripts\workbench.py`
+
+验证结果：
+
+- `py -B skills/codex-workbench/scripts/workbench.py golden-test`：通过，`plugin-hook-hard-gate` 通过。
+- `py -B skills/codex-workbench/scripts/workbench.py doctor --plugin <plugin-root> --personal-skill <personal-skill>`：通过，P0/P1/P2/P3 均为 0。
+- `py -B skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --personal-skill <personal-skill> --expected-version 2.0.3 --strict-release`：通过，P0/P1/P2/P3 均为 0。
+
+后续动作：
+
+- 推送修复到 `main` 后观察 GitHub Actions；不移动已经发布的 `v2.0.3` tag，除非决定重新发布 patch tag。
+
 ### 2026-06-19 - 三角复查后修复 light 降级、accepted risk、traceability 和发布同步缺口
 
 问题：

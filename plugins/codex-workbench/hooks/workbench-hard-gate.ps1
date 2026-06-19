@@ -1070,6 +1070,7 @@ try {
         if ([string]::IsNullOrWhiteSpace($reasonDetail)) { $reasonDetail = "本轮没有记录到项目质量门调用" }
         Out-HookJson -Payload @{
           decision = "block"
+          repoRoot = $repoRoot
           reason = "检测到本轮触碰过的项目缺少本轮质量门证明：$reasonDetail。项目：$repoRoot。请先运行 .\workbench\quality\quality-gate.ps1；如果无法运行，必须在最终回复中说明原因和剩余风险。"
         }
         exit 0

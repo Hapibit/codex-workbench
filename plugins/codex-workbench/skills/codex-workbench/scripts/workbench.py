@@ -3284,9 +3284,10 @@ def run_plugin_hook_golden_case() -> dict[str, Any]:
         assert_condition(stop_result["returncode"] == 0, f"hook golden: Stop exited {stop_result['returncode']}: {stop_result['stderr']}", failures)
         assert_condition(stop_payload.get("decision") == "block", "hook golden: Stop should block dirty nested repo without quality-gate marker", failures)
         assert_condition("missing quality-gate-ok.json" in stop_reason, "hook golden: Stop block should mention missing quality-gate-ok.json", failures)
-        normalized_reason = stop_reason.replace("\\", "/").lower()
+        stop_repo_root = str(stop_payload.get("repoRoot") or "")
+        normalized_stop_repo = stop_repo_root.replace("\\", "/").lower()
         normalized_nested = str(nested).replace("\\", "/").lower()
-        assert_condition(normalized_nested in normalized_reason, "hook golden: Stop block should report the nested repo path", failures)
+        assert_condition(normalized_stop_repo == normalized_nested or normalized_nested in stop_reason.replace("\\", "/").lower(), "hook golden: Stop block should report the nested repo path", failures)
 
         marker_dir = nested / ".workbench-validation"
         marker_dir.mkdir(parents=True, exist_ok=True)
