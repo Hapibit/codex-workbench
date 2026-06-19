@@ -3,6 +3,7 @@
   "include": [
     ".codex-plugin/plugin.json",
     ".gitignore",
+    "packaging-manifest.json",
     "README.md",
     "reader.md",
     "hooks/**",
