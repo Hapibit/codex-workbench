@@ -62,6 +62,7 @@
 后续动作：
 
 - 提交并推送后观察 GitHub Actions。如果 CI 仍失败，直接依据新增的 `stopRepoRoot` 与 `stopStdoutExcerpt` 判断是 hook 返回路径错误还是断言条件仍不兼容。
+- 后续 CI 复查发现 Windows runner 的 Python stdout 使用 `cp1252`，新增中文诊断字段触发 `UnicodeEncodeError`。已进一步修复 `write_json()`，标准输出统一按 UTF-8 bytes 写出；文件输出仍保持 UTF-8。
 
 ### 2026-06-20 - 发布 2.0.3 并补充 reader.md
 

@@ -901,7 +901,11 @@ def write_json(data: dict[str, Any], output: str | None) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(text + "\n", encoding="utf-8")
     else:
-        print(text)
+        try:
+            sys.stdout.buffer.write((text + "\n").encode("utf-8"))
+            sys.stdout.buffer.flush()
+        except AttributeError:
+            print(text)
 
 
 def format_commands(commands: list[dict[str, Any]]) -> str:
