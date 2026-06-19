@@ -3742,13 +3742,15 @@ def compare_skill_trees(personal: Path, plugin_skill: Path) -> list[dict[str, st
 
 
 def doctor_workbench(plugin_path: str | None = None, personal_skill_path: str | None = None) -> dict[str, Any]:
+    personal_explicit = personal_skill_path is not None
     personal = Path(personal_skill_path).expanduser().resolve() if personal_skill_path else default_personal_skill_root()
     plugin = Path(plugin_path).expanduser().resolve() if plugin_path else default_plugin_root()
     findings: list[dict[str, str]] = []
     checks: list[str] = []
 
     if not personal.exists():
-        findings.append(doctor_issue("P1", "personal-skill-not-found", "Personal skill root was not found.", str(personal)))
+        if personal_explicit:
+            findings.append(doctor_issue("P1", "personal-skill-not-found", "Personal skill root was not found.", str(personal)))
     else:
         checks.append("personal skill required files")
         findings.extend(validate_skill_files(personal, "Personal skill"))
