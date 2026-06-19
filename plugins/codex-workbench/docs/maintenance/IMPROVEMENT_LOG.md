@@ -32,6 +32,139 @@
 
 ## 记录
 
+### 2026-06-20 - 发布 2.0.3 并补充 reader.md
+
+问题：
+
+用户要求开始发布，并明确要求同步文件版本、补写 `reader.md`。2.0.2 已经完成第一轮防跳过收紧，但发布包入口仍缺一个短读者指南，README、CI 和 package-check 命令也需要随 patch 发布版本统一。
+
+证据来源：
+
+- 用户反馈：要求“开始发布，对应的文件版本也要改，然后就是 reader.md 文件记得写”。
+- 本地发布检查：发布包 manifest、README、CI workflow 和 package-check 命令仍引用 `2.0.2`。
+
+决策：
+
+作为向后兼容 patch 发布 `2.0.3`。不改变 2.0.0 架构基线，不修改生成项目的 `WORKBENCH_VERSION = "2.0.0"`；只同步插件发布版本、发布检查命令、维护日志和读者入口。`reader.md` 定位为快速入口，不复制完整 README。
+
+变更文件：
+
+- `.codex-plugin/plugin.json`
+- `README.md`
+- `reader.md`
+- `packaging-manifest.json`
+- `docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md`
+- `docs/maintenance/IMPROVEMENT_LOG.md`
+- 外层 `README.md`
+- 外层 `.github/workflows/codex-workbench.yml`
+
+验证结果：
+
+- `py -B skills/codex-workbench/scripts/workbench.py self-test`：通过。
+- `py -B skills/codex-workbench/scripts/workbench.py golden-test`：通过。
+- `py -B skills/codex-workbench/scripts/workbench.py doctor --plugin <plugin-root> --personal-skill <personal-skill>`：通过，P0/P1/P2/P3 均为 0。
+- `py -B skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --personal-skill <personal-skill> --expected-version 2.0.3 --write-report`：通过，manifestVersion 为 `2.0.3`，visibleSkills 为 `codex-workbench`，P0/P1 为 0；首次运行发现未跟踪发布包文件 P2。
+- `git add -- .github plugins/codex-workbench/.gitignore plugins/codex-workbench/reader.md plugins/codex-workbench/skills/codex-workbench/scripts/workbench_lib` 后，`package-check --expected-version 2.0.3 --strict-release`：通过，P0/P1/P2/P3 均为 0。
+
+后续动作：
+
+- 发布 tag 前确认 staged 发布包文件会随版本提交一起进入 Git；不要把 `.workbench-validation/` 机器报告提交进发布包。
+
+### 2026-06-19 - 三角复查后修复 light 降级、accepted risk、traceability 和发布同步缺口
+
+问题：
+
+再次多 agent 复查发现 2.0.2 仍有几类可操作缺口：`light` 记录虽然已要求字段齐全，但仍可能用完整 JSON 把高风险路径降级；strict 未验证项需要更明确的 `accepted_risk` 语义和 `passed_with_risk` marker；strict traceability 不能只看矩阵里存在旧的 covered 行，必须绑定本功能 `IMPACT_ANALYSIS.md` 的预计影响 ID；runtime gate 与 quality gate 都写同一个 workflow state 文件，存在互相覆盖风险；doctor/package-check 在缺少个人 skill 镜像时不能自比自；hook 的只读命令豁免不能允许复合命令绕过危险命令检查。
+
+证据来源：
+
+- 多 agent 复查：
+  - 文档入口 agent 指出生成 `AGENTS.md` / `WORKBENCH.md` 仍暴露过多内部脚本和阅读负担。
+  - 质量门 agent 指出 `light CHANGE_LOG` 高风险路径降级、strict accepted risk 空值、traceability 未绑定影响 ID、runtime/quality state 覆盖风险。
+  - 发布/hook agent 指出 personal/plugin sync 自比自、`hooks.json` matcher 未覆盖当前工具命名、只读前缀可掩盖复合危险命令、核心脚本扫描被跳过。
+- 官方/外部资料：
+  - OpenAI Codex hooks/customization：hook 和项目规则需要与确定性检查结合。
+  - NASA requirements management / SWEHB：需求变更需要影响分析和 bidirectional traceability。
+  - GitHub protected branches：required checks/reviews 才是远程合并硬门禁。
+  - W3C WAI：自动化可访问性工具只能辅助，不能单独证明语义正确。
+
+决策：
+
+继续保留 2.0.0 整体架构，不大改目录层级；把发现的绕过路径收敛到脚本、hook 和 golden test。`light` 只用于低风险显式 scope 变更；strict 风险接受必须有用户确认、替代验证和 follow-up；quality gate 状态与 runtime gate 状态拆成不同文件；发布检查默认检查真实个人 skill 镜像，不再自比自；生成文档只做分层读取和边界措辞优化，不重写整体说明。
+
+变更文件：
+
+- `skills/codex-workbench/scripts/workbench.py`
+- `hooks/workbench-hard-gate.ps1`
+- `hooks/hooks.json`
+- `packaging-manifest.json`
+- `.gitignore`
+- `README.md`
+- `skills/codex-workbench/assets/project-adapter-template/AGENTS.md`
+- `skills/codex-workbench/assets/project-adapter-template/WORKBENCH.md`
+- `skills/codex-workbench/assets/project-adapter-template/FEATURE_WORKFLOW.md`
+- `skills/codex-workbench/assets/project-adapter-template/PROJECT_STATE.md`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/delivery/CHANGE_LOG.md`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/review/independent-review-prompt.md`
+
+验证结果：
+
+- 待最终复检：`self-test`、`golden-test`、plugin doctor、personal-skill doctor、`package-check --expected-version 2.0.2 --write-report`。
+
+后续动作：
+
+- 继续把 stale marker hash 校验、branch protection 远程验证、UI/a11y/eval 证据充分性放入后续 parser / CI / review 改进；不把本地 parser 夸大成业务语义证明。
+
+### 2026-06-19 - 多 agent 复检后收紧 2.0.2 防跳过门禁
+
+问题：
+
+多 agent 复检发现 2.0.2 的防跳过机制仍有边界缺口：hook 的 Stop 阶段容易只看当前 `cwd`，对 nested repo 或绝对路径写入归因不足；`quality-gate-ok.json` 新鲜度不能只看 mtime，必须校验 schema、status、`git_head`、`diff_hash` 和 `checks_run`；patch 新增内容可能写入 `approval_policy = 'never'`、`danger-full-access` 等绕过配置；README 对 `quality_gate.py` 的语义证明能力描述偏强。后续复检又发现 `VERIFY.md`、`REVIEW.md`、strict `TRACEABILITY.md` 仍偏状态字段检查，`package-check` 对 JSON escaped Windows 个人路径和本地同步残留有假阴性风险，manifest 长描述也需要同步 hook trust / CI 边界。
+
+证据来源：
+
+- 多 agent 审查：hook agent、quality-gate agent、docs agent 分别指出 touched repo 追踪、marker 语义校验、feature/light 记录硬要求、文档边界和 Windows 命令示例问题。
+- 多 agent 二次复检：quality-gate agent 指出空 `VERIFY.md`、blocking `REVIEW.md` 和 strict `TRACEABILITY.md missing` 需要确定性 parser / golden test；docs/release agent 指出 package-check 对 JSON escaped personal path 和发布残留目录存在假阴性，manifest 文案边界比 README 更强。
+- 官方资料：
+  - OpenAI Codex customization: `https://developers.openai.com/codex/concepts/customization`
+  - OpenAI Codex hooks: `https://developers.openai.com/codex/hooks`
+  - OpenAI eval guidance: `https://developers.openai.com/blog/eval-skills`
+  - NASA Software Engineering Handbook traceability: `https://swehb.nasa.gov/plugins/viewsource/viewpagesrc.action?pageId=215777306`
+  - W3C WAI accessibility evaluation tools: `https://www.w3.org/WAI/test-evaluate/tools/selecting`
+  - Git hooks: `https://git-scm.com/docs/githooks`
+  - GitHub protected branches: `https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches`
+- 本地复现：hook 模拟验证 `workbench/docs` patch 被 deny、nested repo dirty worktree 被 Stop block、`approval_policy = 'never'` patch 被 deny。
+
+决策：
+
+把“防跳过”从软规则继续下沉到工具层。hook 负责粗拦截和收尾阻断，quality gate 负责确定性证据状态，CI/branch protection 仍是远程最终门禁。新增 `quality-evidence-contract`，把空 `VERIFY.md`、blocking `REVIEW.md`、strict `TRACEABILITY.md missing` 从软提醒升级为生成型质量门检查。文档必须区分“已由脚本确定性检查证据形态和状态冲突”和“仍需 review/CI/人工判断的语义质量”。
+
+变更文件：
+
+- `hooks/workbench-hard-gate.ps1`
+- `.codex-plugin/plugin.json`
+- `skills/codex-workbench/scripts/workbench.py`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/delivery/CHANGE_LOG.md`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/runtime/WORKFLOW_STATE.schema.json`
+- `skills/codex-workbench/assets/project-adapter-template/workbench/feature-template/VERIFY.md`
+- `README.md`
+- `docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md`
+- `skills/codex-workbench/SKILL.md`
+
+验证结果：
+
+- `py -B skills/codex-workbench/scripts/workbench.py self-test`：通过。
+- `py -B skills/codex-workbench/scripts/workbench.py golden-test`：通过，包含 `quality-gate-contract`、`quality-evidence-contract` 和 `plugin-hook-hard-gate`；缺 feature/light 记录的受控 diff 失败，有效 light fenced JSON 通过；空 `VERIFY.md`、blocking `REVIEW.md`、strict `TRACEABILITY.md missing` 均失败；hook 对绕过配置、`workbench/docs` 和 nested repo 缺 marker 均阻断。
+- `py -B skills/codex-workbench/scripts/workbench.py doctor --plugin <plugin-root>`：通过，P0/P1/P2/P3 均为 0。
+- `py -B skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 2.0.2 --write-report`：通过，P0/P1/P2/P3 均为 0。
+- Hook 手工模拟：`approval_policy = 'never'` patch 被 `PreToolUse` deny；`workbench/docs/test.md` patch 被 `PreToolUse` deny；nested repo 缺 `quality-gate-ok.json` 时 `Stop` block。该路径已沉淀为 `plugin-hook-hard-gate` golden case。
+- Python 运行时仍输出 `Could not find platform independent libraries <prefix>`，但上述命令退出码均为 0。
+
+后续动作：
+
+- 继续补强 UI/a11y/eval 证据的确定性形态检查；无障碍和 AI eval 充分性仍不能由脚本单独证明，继续标记为需要 review/CI/人工判断。
+- 如果后续出现“真实证据造假”或“review 漏掉 P0/P1”，不要把 parser 夸大为语义证明，应升级独立 review、CI artifact 校验或人工验收流程。
+
 ### 2026-06-18 - 修复 Windows hook 命令入口仍可能 code 1
 
 问题：

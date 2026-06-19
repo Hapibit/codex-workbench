@@ -71,14 +71,14 @@ workbench_upgrade_assessment: unassessed
 | --- | --- | --- | --- | --- | --- | --- |
 |  |  |  | false |  |  |  |
 
-strict 变更不能只写“无法验证原因”就放行。必须同时具备 `accepted_risk`、用户确认、替代验证和 `deferred_follow_up`，否则质量门应失败或输出 `PASS_WITH_RISK`。
+strict 变更不能只写“无法验证原因”就放行。必须同时具备 `accepted_risk`、用户确认、替代验证和 `deferred_follow_up`，否则质量门应失败。若 scorecard 或质量门因人工接受风险而通过，marker 必须写 `passed_with_risk`，并视为需要人工确认的带风险通过，不能当作 clean PASS。
 
 ## 失败证据
 
 AI 做错、验证失败或返工时必须填写：
 
 | 问题 | 失败命令/场景 | 复测结果 | 是否需要更新 REVIEW/DECISIONS/FAILURE_LOG | 工作台升级初判 |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 |  |  |  |  |  |
 
 复测要求：

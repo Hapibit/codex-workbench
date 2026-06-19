@@ -61,7 +61,7 @@ Use Codex Workbench to tell me the next step for this project.
 | 要确定模块、数据、API、AI、权限边界 | `workbench/architecture/` | 写清模块边界、数据模型、API 合约、AI 工具调用、权限边界、ADR 和回滚约束。 | 架构、企业 AI 生命周期、画图 |
 | 要拆版本、迭代和任务 | `workbench/delivery/` | 写清当前迭代范围、任务拆分、验证计划、依赖和回滚路径。 | CI/CD、技术文档 |
 | 要开始写某个功能 | `workbench/features/<feature-name>/` | 先建立或更新功能包，完成变更请求、影响分析和计划，再实现约定范围。 | 测试、框架、语言专项能力 |
-| 要确认质量或复盘失败 | `workbench/quality/`、`scorecard/`、`review/`、`feedback/` | 运行可用质量门，写验证证据和 review 结论；重复失败进入机制升级判断。 | 测试、CI、安全、AI eval、独立审查 |
+| 要确认质量或复盘失败 | `workbench/quality/`、`workbench/scorecard/`、`workbench/review/`、`workbench/feedback/` | 运行可用质量门，写验证证据和 review 结论；重复失败进入机制升级判断。 | 测试、CI、安全、AI eval、独立审查 |
 
 如果增强能力不存在，仍然继续走本工作台的核心文件和脚本；增强 skill 不是使用本工作台的前置条件。
 
@@ -103,7 +103,7 @@ Use Codex Workbench to tell me the next step for this project.
 | 层级 | 作用 | 能否硬拦截 |
 | --- | --- | --- |
 | `AGENTS.md`、`WORKBENCH.md`、`FEATURE_WORKFLOW.md` | 告诉 AI 应该怎样工作 | 不能，只是指导 |
-| `workbench.py validate/audit`、`quality_gate.py`、`scorecard.py` | 检查项目状态、目录契约、功能包阶段和证据成熟度 | 可以拦截可检测问题 |
+| Codex Workbench validate/audit、`quality_gate.py`、`scorecard.py` | 检查项目状态、目录契约、功能包阶段和证据成熟度 | 可以拦截可检测问题 |
 | hook、pre-commit、CI、独立审查 | 拦截危险命令、缺失质量门、服务器端质量和高风险判断 | 可以拦截工具层和工程层问题 |
 
 因此，AI 每次要推进“开始、继续、下一步、规划、开发、实现、修复、复查”时，必须先完成状态自检：
@@ -133,7 +133,7 @@ feedback/
 archive/
 ```
 
-`workbench/quality/quality_gate.py` 和 `workbench.py validate/audit` 会检查这个目录契约。
+`workbench/quality/quality_gate.py` 和 Codex Workbench validate/audit 会检查这个目录契约。
 
 如果发现额外目录，例如 `workbench/docs/`：
 
@@ -372,7 +372,6 @@ python workbench/runtime/runtime_gate.py --apply --backend-health-url http://loc
 | `not_required` | 本次问题是一次性项目个案，已有项目内修复和验证证据，不需要升级工作台。 |
 | `required` | 本次失败说明模板、脚本、质量门、hook、CI、测试或审查规则必须升级。 |
 | `deferred` | 暂不升级，但必须说明 owner、复查时间、风险和 `FAILURE_LOG.md` 条目。 |
-| `not_required` | 一次性问题，已经在当前功能修复并验证，不需要升级工作台机制。 |
 
 能自动化的问题优先进入脚本、测试、lint、CI 或质量门；无法自动化的业务判断才保留在 Markdown 规则里。
 
@@ -385,7 +384,7 @@ python workbench/runtime/runtime_gate.py --apply --backend-health-url http://loc
 | 机器生成报告 | `.workbench-validation/*.json` | 默认保留最近报告；旧报告可归档到 `workbench/archive/validation/`，不作为长期人工说明。 |
 | 功能级证据 | `workbench/features/<feature-name>/` | 功能开发、验证、审查和决策证据跟功能包保留；发布后可人工归档到 `workbench/archive/features/`。 |
 | 重复失败和跨功能问题 | `workbench/feedback/FAILURE_LOG.md` | 只记录重复问题、P0/P1、审查漏报、质量门缺口或流程缺陷；不要记录每次普通失败。 |
-| 长期工作台改进 | `docs/maintenance/` 或项目 ADR | 重大规则、架构和发布边界变化用 ADR 或版本归档；主日志只保留当前索引和最近记录。 |
+| 长期工作台改进 | `workbench/feedback/FAILURE_LOG.md`、`workbench/architecture/adr/`、`workbench/archive/` | 重大规则、架构和发布边界变化用项目 ADR 或版本归档；跨功能问题先进入 feedback，不创建插件维护目录。 |
 
 可以让 Codex Workbench 先预览保留计划：
 
@@ -393,19 +392,9 @@ python workbench/runtime/runtime_gate.py --apply --backend-health-url http://loc
 Use Codex Workbench to preview retention for this project.
 ```
 
-底层命令：
+只有确认后才允许 Codex Workbench 归档旧机器报告；不要手动删除人工维护的功能证据、失败日志或 ADR。
 
-```bash
-python <codex-workbench>/scripts/workbench.py retention --project <repo>
-```
-
-只有确认后才允许归档旧机器报告：
-
-```bash
-python <codex-workbench>/scripts/workbench.py retention --project <repo> --apply --write-report
-```
-
-`retention --apply` 只移动旧机器报告，不删除文件，不重写 `FAILURE_LOG.md`、`IMPROVEMENT_LOG.md`、ADR 或功能包内容。人工维护日志过大时，只给出拆分/归档建议。
+`retention --apply` 只移动旧机器报告，不删除文件，不重写 `FAILURE_LOG.md`、项目 ADR 或功能包内容。人工维护日志过大时，只给出拆分/归档建议。
 
 ## 验证适配器
 

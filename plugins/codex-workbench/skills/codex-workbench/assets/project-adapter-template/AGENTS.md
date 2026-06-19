@@ -11,16 +11,12 @@
 
 ## AI 必读入口
 
-1. 修改代码前先读本文件、`PROJECT_INTAKE.md`、`WORKBENCH.md`、`REVIEW.md`、`DEVELOPMENT_FLOW.md`、`PRODUCT_BASELINE.md` 和 `FEATURE_WORKFLOW.md`。
-2. 从 0 到 1 的项目先按 `WORKBENCH.md` 的标准开发流程推进：项目发现、产品简报、PRD、UX/原型、架构设计、交付计划、功能包、验证审查、迭代复盘。
-3. 涉及具体目录、运行命令、审查输出时，优先读取 `workbench/` 下的脚本和提示。
-4. `PROJECT_INTAKE.md` 是项目预处理画像；`status: draft` 或存在 open 阻塞问题时，不要把项目方向当成已确认。
-5. `workbench/product/PRODUCT_BRIEF.md`、`workbench/product/PRD.md`、`workbench/design/UX_SPEC.md`、`workbench/architecture/ARCHITECTURE.md` 是 0 到 1 的前置事实源；不要只凭聊天记录写代码。
-6. `DEVELOPMENT_FLOW.md` 是项目开发流程契约；`status: confirmed` 时按它执行，`status: draft` 时只能作为参考，功能开发前要先确认。
-7. `PRODUCT_BASELINE.md` 是产品质量下限；所有用户可见功能都要满足。
-8. `FEATURE_WORKFLOW.md` 是 2.0.0 功能工作包状态机；新功能、跨模块或高风险改动优先按它建立 `workbench/features/<feature-name>/`。
-9. `workbench/scorecard/RUBRIC.md` 和 `SCORECARD.md` 是证据审计入口；质量门会在确定性检查通过后调用 `scorecard.py` 生成证据成熟度报告。
-10. 当前文档缺少项目专属业务规则时，先从代码、README、CI 和测试中推断；仍不清楚再问用户。
+1. 每轮先读本文件、`PROJECT_INTAKE.md` 和 `PROJECT_STATE.md`；如果它们缺失、draft 或有 open blocker，先说明阻塞。
+2. 只有任务触发时才继续读专题文件：流程问题读 `WORKBENCH.md` / `DEVELOPMENT_FLOW.md`，功能变更读 `FEATURE_WORKFLOW.md`，用户可见功能读 `PRODUCT_BASELINE.md`，审查读 `REVIEW.md`。
+3. 新项目或项目方向变化时，先补项目发现、产品、UX、架构和交付基线；普通小改动不要默认要求全量 0 到 1 流程。
+4. `workbench/product/`、`workbench/design/`、`workbench/architecture/` 是长期事实源；相关变更只更新受影响文件，不复制全部内容。
+5. 新功能、跨模块或高风险改动优先按 `FEATURE_WORKFLOW.md` 建立 `workbench/features/<feature-name>/`。
+6. 当前文档缺少项目专属业务规则时，先从代码、README、CI 和测试中推断；仍不清楚再问用户。
 
 ## 默认工作流
 
@@ -34,7 +30,7 @@
 8. 优先沿用已有框架、脚本、组件、数据模型和目录约定。
 9. AI 实现后必须先验证，再审查；审查发现问题时回到 DESIGN、PLAN、TASKS 或实现层修正，而不是只补丁式乱改。
 10. 代码变更后运行最小可靠验证；跨模块、高风险或用户要求时扩大验证。
-11. 运行项目质量门或 `workbench/scorecard/scorecard.py`，确认 `decision`、硬阻塞、可信度和剩余风险；不能用总分绕过 P0/P1、open blocker 或未完成复核。
+11. 代码或受控资产变更后必须运行项目质量门；`workbench/scorecard/scorecard.py` 只能作为质量门调用后的证据审计，单独运行不得放行变更。
 12. 修改后评估 AI 工作效果：返工原因、审查发现、质量门失败、是否需要升级模板或自动化，记录到 `workbench/feedback/AI_EFFECTIVENESS.md`。
 13. `VERIFY.md` 或 `REVIEW.md` 出现 failed、blocked、P0、P1、返工或重复问题时，必须在功能 `REVIEW.md` 的 `workbench_upgrade_assessment` 写明升级判断：`required`、`deferred` 或 `not_required`。
 14. 最终回复必须说明改了什么、验证结果、未验证原因和剩余风险。
@@ -45,7 +41,7 @@
 AI 不能只靠“我记得规则”推进工作。每次遇到“开始、继续、下一步、规划、开发、实现、修复、复查”这类短指令时，先执行工作台状态自检：
 
 1. 判断当前会话职责；如果用户已声明是工作台配置会话，只处理规则、skill、MCP、hook、模板、质量门和插件，不推进业务代码。
-2. 读取 `PROJECT_INTAKE.md`、`WORKBENCH.md`、`FEATURE_WORKFLOW.md`、`workbench/features/` 和 `.workbench-validation/` 的当前状态。
+2. 读取 `PROJECT_INTAKE.md`、`PROJECT_STATE.md`、相关功能包和 `.workbench-validation/` 的当前状态；只有流程或功能包问题才展开 `WORKBENCH.md` / `FEATURE_WORKFLOW.md`。
 3. 明确本轮属于项目发现、产品规划、UX/原型、架构设计、交付计划、功能开发、验证审查、证据审计还是反馈复盘。
 4. 如果阶段不清楚、前置状态未通过、存在 open blocker、风险等级不匹配或验证计划缺失，先停止并问最少阻塞问题。
 5. 只有状态检查通过后，才能进入实现、修改或交付建议。
@@ -108,7 +104,7 @@ archive/
 - 重要功能的 `workbench/features/<feature-name>/` 已记录变更请求、影响分析、规格、设计、计划、任务、验证和审查证据。
 - `light` 任务即使不创建完整功能包，也已在 `CHANGE_LOG.md` 说明问题、改动、验证和剩余风险。
 - `standard` / `strict` 功能工作包已填写 `workflow_profile`、风险分数、hard triggers 和分级理由。
-- `workbench/scorecard/scorecard.py` 输出 `PASS` 或 `PASS_WITH_RISK`，且没有硬阻塞；低可信度、语义/架构复核仍为 pending 时要说明风险。
+- 项目质量门已运行并通过；质量门调用的 scorecard 输出 `PASS` 或 `PASS_WITH_RISK`，且没有硬阻塞。单独运行 scorecard 不能替代质量门。
 - 相关测试、lint、类型检查、构建或质量门已运行；不能运行时说明原因。
 - 没有提交 secrets、个人路径、登录态、临时调试输出或无关重构。
 - 高风险改动已有回滚路径或明确说明剩余风险。

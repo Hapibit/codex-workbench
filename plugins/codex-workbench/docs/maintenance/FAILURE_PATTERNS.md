@@ -21,6 +21,144 @@
 
 ## 失败模式
 
+### FP-016 - 完整 light JSON 仍可能降级高风险路径
+
+失败模式：
+
+即使 `CHANGE_LOG.md` fenced JSON 字段完整，如果质量门只看 `workflow_profile=light`、scope 覆盖当前 diff 和非空证据，AI 仍可能把 API、数据库、权限、架构、quality gate、runtime、release 等高风险路径伪装成 light 变更，绕过 feature package、影响分析和 review。
+
+证据位置：
+
+- 多 agent 质量门复查指出 `has_valid_light_change_record()` 没有路径级 hard trigger。
+- `CHANGE_LOG.md` 自身规则已经说影响 PRD/UX/API/DATA/AI/权限/发布不能走 light，但脚本需要同步强制。
+
+工作台处理层：
+
+- 质量门层：新增 `is_light_allowed_path()`，禁止高风险受控路径和权限/安全/发布类命名走 light。
+- 测试层：`quality-gate-contract` golden test 覆盖 wildcard `scope:["*"]` 失败和高风险 `workbench/architecture/API_DESIGN.md` light 降级失败。
+- 模板层：`CHANGE_LOG.md` 明确必填字段、显式 scope 和 light 禁止路径。
+
+自动化状态：
+
+- 已自动化：wildcard scope、高风险路径 light 降级会失败。
+- 仍需人工/CI：路径名无法完全识别业务风险；不确定时必须升级为 standard/strict 或走 feature package。
+
+### FP-015 - strict accepted risk 和 traceability 可以被旧证据伪通过
+
+失败模式：
+
+strict 功能如果只检查 `TRACEABILITY.md` 里存在一些 covered 行，可能用旧矩阵覆盖新功能；如果 `VERIFY.md` 的未验证项只要写 `accepted_risk=true` 就通过，可能没有用户确认、替代验证和 follow-up。最终会把带风险交付伪装成 clean pass。
+
+证据位置：
+
+- 多 agent 质量门复查指出 strict traceability 未绑定 `IMPACT_ANALYSIS.md` 的预计影响 ID。
+- 多 agent 复查指出 `accepted_risk` 空值或 true 但缺确认信息的行可能漏过。
+
+工作台处理层：
+
+- 质量门层：`require_traceability_evidence()` 解析 `IMPACT_ANALYSIS.md` 的预计影响 ID，要求每个 ID 在矩阵里有非 missing 状态和验证位置。
+- 质量门层：strict 未验证项必须有明确 `accepted_risk=true/false`；true 时必须有用户确认、替代验证和 `deferred_follow_up`。
+- marker 层：只要存在 accepted risk，`quality-gate-ok.json` 写 `passed_with_risk` 和 `accepted_risk_features`。
+- 测试层：`quality-evidence-contract` 覆盖旧矩阵伪通过失败、不完整 accepted risk 失败、完整 accepted risk 只能 `passed_with_risk`。
+
+自动化状态：
+
+- 已自动化：impact ID 缺矩阵、缺验证位置、未接受或不完整接受风险会失败。
+- 仍需人工/CI：用户确认是否真实、替代验证是否足够、traceability 是否覆盖完整业务宇宙仍需 review/CI/人工验收。
+
+### FP-014 - 发布同步和 hook 只读豁免可能形成假安全
+
+失败模式：
+
+doctor/package-check 如果找不到个人 skill 镜像时回退到当前脚本目录，会把插件包自己和自己比较，形成同步假阳性。hook 如果只看命令前缀，把“只读搜索 + 后续破坏性命令”的复合命令当作只读命令，会让危险动作绕过 destructive 检查。`hooks.json` matcher 如果只覆盖旧工具名，也可能漏掉当前 `functions.shell_command` / `functions.apply_patch`。
+
+证据位置：
+
+- 多 agent 发布/hook 复查指出 personal/plugin sync 自比自、只读快路径覆盖复合命令、matcher 未覆盖当前工具命名。
+- 当前本地 `package-check` 在插件脚本改动后报告 personal/plugin drift，说明发布前必须同步个人镜像并重跑检查。
+
+工作台处理层：
+
+- 脚本层：`doctor_workbench()` 默认检查 `~/.codex/skills/codex-workbench`；不存在时报 P1，不再 fallback 到插件 skill。
+- 发布层：`package-check` 输出 materialized manifest file list hash，并扫描核心 `workbench.py` 的 secret/path 风险。
+- hook 层：只读豁免要求单一命令且无 shell 控制符；复合命令继续做危险命令扫描。
+- hook 配置：`hooks.json` matcher 覆盖 `functions.*`、`shell_command` 和 `multi_tool_use.*`。
+- 测试层：`plugin-hook-hard-gate` 覆盖单一只读搜索不 deny、只读前缀加后续危险动作会 deny。
+
+自动化状态：
+
+- 已自动化：个人 skill 缺失/漂移会导致 doctor/package-check P1；复合只读加危险动作会被 hook deny。
+- 仍需人工：真正发布前仍需确认使用 manifest 产物，不把 `.workbench-validation/` 直接压进包。
+
+### FP-012 - 状态已通过但证据表仍为空或阻塞项仍存在
+
+失败模式：
+
+AI 可以把 `VERIFY.md status: passed`、`REVIEW.md status: passed` 或 `FEATURE_STATUS.json delivery_allowed: true` 写成通过状态，但实际证据表仍为空、review 仍勾选 blocking P0/P1，或 strict 功能没有清掉 `TRACEABILITY.md` 的 `missing` 行。这样下一层如果只检查 status 字段，就会把“流程文字完成”误判成“证据链完成”。
+
+证据位置：
+
+- 多 agent quality-gate 复检指出 `VERIFY.md`、`REVIEW.md` 和 strict `TRACEABILITY.md` 仍偏状态字段检查。
+- 架构稿第 18 节要求空 `VERIFY`、未解决 P0/P1、strict traceability missing 这类绕过路径必须有 golden test。
+- NASA Software Engineering Handbook 强调 traceability 要连接需求、设计、代码和测试，并支持变更影响分析。
+- W3C WAI 明确自动化无障碍工具只能辅助判断，不能单独决定 accessibility。
+
+工作台处理层：
+
+- 质量门层：生成型 `quality_gate.py` 新增 `require_verify_evidence`、`require_review_evidence` 和 `require_traceability_evidence`，检查 passed 状态与证据形态、blocking P0/P1、strict traceability 状态是否冲突。
+- 测试层：`golden-test` 新增 `quality-evidence-contract`，证明空 `VERIFY.md`、blocking `REVIEW.md` 和 strict `TRACEABILITY.md missing` 会失败。
+- 文档层：README 和架构稿明确这些只是证据形态和一致性检查，不能证明证据真实性、review 未漏判、UI/a11y/eval 充分。
+
+自动化状态：
+
+- 已自动化：`quality-evidence-contract` 覆盖三条绕过路径。
+- 仍需人工/CI：证据内容是否真实、P0/P1 是否被审查遗漏、traceability 是否覆盖完整需求宇宙、UI/a11y/eval 是否充分，仍必须由真实测试报告、CI artifact、独立 review 或人工验收支撑。
+
+### FP-013 - 发布扫描漏掉 JSON 转义个人路径或同步残留
+
+失败模式：
+
+发布包检查只匹配未转义的 Windows 绝对路径，可能漏掉 JSON 文件里被双反斜杠转义的 Windows 用户目录；同时如果本地同步残留如 `assets/assets`、`references/references`、`scripts/scripts` 没被 manifest 和扫描规则同时覆盖，按本地目录打包时可能带出不该发布的文件。
+
+证据位置：
+
+- 多 agent docs/release 复检指出 `.workbench-validation/package-check-report.json` 中出现 JSON escaped Windows 路径，但 package-check 没报错。
+- `packaging-manifest.json` 已经把 `.workbench-validation/**` 标为排除项，但脚本层需要同时要求 nested sync residue 排除项。
+
+工作台处理层：
+
+- 脚本层：个人路径正则支持一个或多个反斜杠，能匹配 JSON escaped Windows path。
+- 发布层：`PACKAGING_MANIFEST_REQUIRED_EXCLUDES` 要求排除 `.workbench-validation/**` 和 nested sync residue；`scan_publish_tree` 跳过 `.workbench-validation` 生成报告目录，避免 `package-check --write-report` 自毁，但仍扫描实际发布树和 manifest。
+- 文档层：manifest longDescription 增加 hook trust、project generation 和 CI/branch protection 边界。
+
+自动化状态：
+
+- 已自动化：`doctor`、`package-check` 会检查 manifest 排除项、个人路径和发布残留。
+- 仍需人工：如果用户绕过 manifest 直接压缩整个本地目录，仍要遵守 README 的发布边界；`.workbench-validation/` 不应进入发布包。
+
+### FP-011 - 防跳过门禁只看当前目录或旧 marker
+
+失败模式：
+
+AI 或脚本实际触碰 nested repo、绝对路径、patch 新增配置或受控代码 diff，但 hook / quality gate 只看当前 `cwd`、marker mtime 或软 Markdown 状态，导致“跳过流程、绕过审批、漏跑质量门”可能没有被下一层发现。
+
+证据位置：
+
+- 多 agent 审查指出 Stop 只看 `hook.cwd`、marker 只看 mtime、patch 不扫描 bypass 配置、受控代码 diff 没有强制 feature/light 记录。
+- 手工模拟发现 `approval_policy = 'never'` 这类空格加引号写法需要正则兜底。
+- Git 官方文档说明 `pre-commit` / `commit-msg` 可被 `--no-verify` 绕过；GitHub protected branches / required checks 才适合承担远程合并门禁。
+
+工作台处理层：
+
+- hook 层：从 patch headers、命令路径和 `cwd` 归因 touched repo；Stop 遍历 touched repo；patch 新增绕过配置直接 deny；异常分支按事件 fail-closed。
+- 质量门层：受控 diff 必须有关联 feature package 或机器可读 light `CHANGE_LOG`；marker 校验 schema、status、`git_head`、`diff_hash`、`checks_run`、scorecard 风险字段。
+- 文档层：README 降级“质量门证明语义正确”的表述，明确证据真实性、P0/P1 语义、strict traceability、UI/a11y/eval 仍需 review/CI/人工判断。
+
+自动化状态：
+
+- 已加入 `golden-test` 的 `quality-gate-contract`。
+- Hook 关键路径已沉淀为 `plugin-hook-hard-gate` golden case。
+
 ### FP-010 - hook 把明确授权的普通目录删除误判为危险命令
 
 失败模式：

@@ -40,7 +40,7 @@ Required sections:
 - How `CHANGE_REQUEST.md` and `IMPACT_ANALYSIS.md` prevent full-document churn by updating only impacted baselines.
 - How to choose `light`, `standard`, or `strict`.
 - How to run quality gate on Windows/macOS/Linux.
-- How `.workbench-validation/workflow-state.json` and `.workbench-validation/quality-gate-ok.json` are generated and invalidated.
+- How `.workbench-validation/quality-workflow-state.json`, `.workbench-validation/runtime-state.json`, and `.workbench-validation/quality-gate-ok.json` are generated and invalidated.
 - How scorecard works as advisory evidence audit, not as a pass/fail judge.
 - How audit severities `P0` through `P3` are interpreted.
 - How to run runtime gate and when `--apply` is allowed.
@@ -182,7 +182,7 @@ Required files:
 
 - `WORKFLOW_STATE.schema.json`: schema for generated workflow state.
 - `BYPASS_LOG.md`: controlled bypass records with reason, scope, risk, user confirmation, expiry, and follow-up.
-- `runtime_gate.py`: generates or checks `.workbench-validation/workflow-state.json`.
+- `runtime_gate.py`: generates or checks `.workbench-validation/runtime-state.json`; quality gate writes `.workbench-validation/quality-workflow-state.json`.
 - wrappers for Windows and POSIX.
 
 Do not trust a long-lived `workbench/runtime/WORKFLOW_STATE.json` as the source of truth.

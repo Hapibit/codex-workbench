@@ -2,7 +2,9 @@
   "schema": "codex-workbench-packaging-manifest/v1",
   "include": [
     ".codex-plugin/plugin.json",
+    ".gitignore",
     "README.md",
+    "reader.md",
     "hooks/**",
     "docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md",
     "docs/WORKFLOW_AND_SCORECARD.md",
@@ -16,6 +18,7 @@
     "skills/codex-workbench/assets/assets/**",
     "skills/codex-workbench/references/references/**",
     "skills/codex-workbench/scripts/scripts/**",
+    "skills/codex-workbench/agents/agents/**",
     "**/__pycache__/**",
     "**/*.pyc",
     ".git/**",

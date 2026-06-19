@@ -1,6 +1,6 @@
 # Codex Workbench 2.0.0 架构设计
 
-本文是 Codex Workbench 2.0.0 的架构设计稿，用来指导后续模板、脚本、hook、quality gate、README 和发布包升级。它不是当前 1.2.0 版本的实现说明，也不代表这些机制已经全部落地。
+本文是 Codex Workbench 2.0.0 的架构设计稿，用来指导模板、脚本、hook、quality gate、README 和发布包升级。当前发布包可能已经是 2.0.x（例如 2.0.3），实际落地状态以 README、脚本和 `.workbench-validation/package-check-report.json` 为准。它不是 1.2.0 的实现说明，也不代表设计中的所有目标都已经完全落地。
 
 本文的边界：
 
@@ -185,7 +185,8 @@ CI / branch protection = 最终合并门禁
 - `WORKBENCH.md`：项目工作台规则。
 - `PROJECT_STATE.md`：当前项目事实索引。
 - `workbench/runtime/WORKFLOW_STATE.schema.json`：状态结构。
-- `.workbench-validation/workflow-state.json`：脚本生成的当前状态。
+- `.workbench-validation/quality-workflow-state.json`：quality gate 生成的当前质量门状态。
+- `.workbench-validation/runtime-state.json`：runtime gate 生成的运行时检查状态。
 - hooks：对高风险工具行为做粗拦截。
 - `quality_gate.py`：对 git diff、状态、证据做最终本地判定。
 - CI / branch protection：对合并做最终门禁。
@@ -610,7 +611,7 @@ JSON 负责给脚本和 CI 读取：
 ```text
 不要长期信任 `workbench/runtime/WORKFLOW_STATE.json`。
 `workbench/runtime/` 只保留 `WORKFLOW_STATE.schema.json` 这类 schema / 脚本契约，
-实际状态写入 `.workbench-validation/workflow-state.json`，并由脚本生成或校验。
+实际状态写入 `.workbench-validation/quality-workflow-state.json` 或 `.workbench-validation/runtime-state.json`，并由对应脚本生成或校验。
 ```
 
 示例：
@@ -1021,7 +1022,7 @@ AI 任务不能只看“能回答”。
 | 1.2.0 暴露的问题 | 2.0.0 修正方向 |
 | --- | --- |
 | AI 会把工作台规则当背景说明，直接推进代码。 | 引入状态机、hook 前置护栏、runtime gate、quality gate、CI 和 branch protection 分层判定；未验证路径标记 `unverified`。 |
-| 当前状态靠 Markdown，容易漏读或后补。 | 引入脚本生成的 `.workbench-validation/workflow-state.json`。 |
+| 当前状态靠 Markdown，容易漏读或后补。 | 引入脚本生成的 `.workbench-validation/quality-workflow-state.json` 和 `.workbench-validation/runtime-state.json`，并避免两类状态互相覆盖。 |
 | 需求变更后，多份文档容易同步负担过重。 | 用 `IMPACT_ANALYSIS.md` 判断只更新受影响基线。 |
 | 文档完整不等于代码正确。 | `VERIFY.md`、`REVIEW.md`、quality gate、CI 要求真实证据。 |
 | scorecard 容易被误解成质量裁判。 | scorecard 只做辅助审计，quality gate 才做硬判定。 |
@@ -1031,6 +1032,21 @@ AI 任务不能只看“能回答”。
 ## 18. 落地路线图
 
 本节是从架构稿拆分到模板、脚本、hook、CI、测试和发布材料的路线图，不是当前版本已完成清单，也不是具体实现规范。
+
+### 18.0 2.0.3 实现状态说明
+
+下面是发布包 `2.0.3` 相对本设计稿的实现状态映射。它用于避免把历史设计 backlog 误读为当前实现缺口；最终状态仍以 README、脚本、golden-test、doctor 和 package-check 输出为准。
+
+| 设计项 | 2.0.3 状态 | 证据 |
+| --- | --- | --- |
+| 工作台目录契约，禁止 AI 发明 `workbench/docs/` 等未声明层。 | 已实现确定性检查。 | `workbench-guardrails` golden case；`validate/audit` directory contract。 |
+| 受控 diff 必须有关联功能包或机器可读 light 变更记录。 | 已实现确定性检查。 | `quality-gate-contract` golden case。 |
+| `quality-gate-ok.json` 绑定 schema、status、`git_head`、`diff_hash` 和 `checks_run`。 | 已实现确定性检查。 | `quality-gate-contract` golden case；生成 marker v2。 |
+| hook 对绕过配置、非法工作台目录和 nested repo 缺 marker 做粗拦截。 | 已实现并有 bypass golden test。 | `plugin-hook-hard-gate` golden case。 |
+| 空 `VERIFY.md`、blocking `REVIEW.md`、strict `TRACEABILITY.md missing` 不能通过。 | 已实现证据形态和状态一致性检查。 | `quality-evidence-contract` golden case。 |
+| `VERIFY.md` 证据真实性、review 是否漏掉 P0/P1、traceability 是否覆盖完整需求宇宙。 | 仍需 review、CI 或人工判断。 | README 标记为语义质量边界；不能宣称完全自动证明。 |
+| UI/a11y/eval 证据充分性。 | 仍部分 `unverified`。 | W3C WAI 明确自动化工具只能辅助，无障碍仍需人工判断；AI eval 仍需样例质量和人工/独立复核。 |
+| 远程合并保护。 | 未经 GitHub API、`gh` 或 CI 环境确认时只能写 `unverified`。 | GitHub required checks / protected branches 是远程门禁来源。 |
 
 2.0.0 落地应按这个顺序做，避免局部优化破坏整体架构。
 

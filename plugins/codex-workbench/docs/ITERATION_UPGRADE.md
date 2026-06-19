@@ -136,7 +136,7 @@ CHANGE
 | --- | --- |
 | README 或 docs | 关键词检索、旧术语清理、package-check。 |
 | 模板字段 | `self-test`、`golden-test`，确认新项目生成文件。 |
-| `runtime_gate.py` | 生成 `.workbench-validation/workflow-state.json`，包含 `git_head`、`diff_hash`、source hashes。 |
+| `runtime_gate.py` | 生成 `.workbench-validation/runtime-state.json`，包含 `git_head`、`diff_hash`、source hashes；不覆盖 quality gate 的 `.workbench-validation/quality-workflow-state.json`。 |
 | `quality_gate.py` | 构造缺 `CHANGE_REQUEST`、缺 `IMPACT_ANALYSIS`、空 `VERIFY`、P0/P1 未解决、旧 marker 等样例。 |
 | scorecard/rubric | 构造高分低质、低分可用样例，更新 `CALIBRATION.md`。 |
 | hook | 明确哪些路径只做提醒、哪些会阻断；不能把未测试路径写成会拦截。 |

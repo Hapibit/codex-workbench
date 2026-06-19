@@ -20,7 +20,7 @@ Upgrade should move the project toward:
 - `workbench/delivery/TRACEABILITY.md` for requirement/design/API/AI to verification mapping.
 - `workbench/delivery/CHANGE_LOG.md` for machine-readable `light` changes.
 - `workbench/delivery/RELEASE_CHECKLIST.md` for release readiness.
-- `workbench/runtime/WORKFLOW_STATE.schema.json` and generated `.workbench-validation/workflow-state.json`.
+- `workbench/runtime/WORKFLOW_STATE.schema.json`, generated `.workbench-validation/runtime-state.json`, and quality gate `.workbench-validation/quality-workflow-state.json`.
 - `workbench/runtime/BYPASS_LOG.md` for controlled bypass records.
 - Feature packages with `CHANGE_REQUEST.md`, `IMPACT_ANALYSIS.md`, `FEATURE_STATUS.json`, and no reliance on old checklist-only state.
 - Quality gate markers that bind `git_head`, `diff_hash`, feature, evidence, commands, and branch protection state.

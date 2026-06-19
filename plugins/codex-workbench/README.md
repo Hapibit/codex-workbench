@@ -1,6 +1,6 @@
 # Codex Workbench
 
-Codex Workbench 是一个给 Codex 使用的 AI 开发工作台插件。2.0.0 的核心不是再写一段提示词，也不是堆更多 Markdown，而是把 AI coding 管成一个可检查的工程状态机：项目基线、变更影响分析、追踪矩阵、验证证据、质量门、审查和失败学习都放进仓库。
+Codex Workbench 是一个给 Codex 使用的 AI 开发工作台插件。当前发布版是 `2.0.3`，基于 `2.0.0` 架构基线。它的核心不是再写一段提示词，也不是堆更多 Markdown，而是把 AI coding 管成一个可检查的工程状态机：项目基线、变更影响分析、追踪矩阵、验证证据、质量门、审查和失败学习都放进仓库。
 
 普通使用者只需要记住一个入口：
 
@@ -26,12 +26,12 @@ Codex Workbench 2.0.0 的目标是：不能保证 AI 永远一次写对，但要
 
 | 层 | 作用 | 典型文件 |
 | --- | --- | --- |
-| Agent Control | 防止 AI 把流程当背景说明，控制当前能不能进入下一步 | `AGENTS.md`、`WORKBENCH.md`、`.workbench-validation/workflow-state.json`、hook、quality gate |
+| Agent Control | 防止 AI 把流程当背景说明，控制当前能不能进入下一步 | `AGENTS.md`、`WORKBENCH.md`、`.workbench-validation/quality-workflow-state.json`、hook、quality gate |
 | 基础约束层 | 保存长期项目事实，约束目标、范围、UX、架构、权限和 AI 边界 | `PROJECT_INTAKE.md`、`PROJECT_STATE.md`、`workbench/product/`、`workbench/design/`、`workbench/architecture/` |
 | 追踪矩阵层 | 连接需求、设计、实现和验证，发现断链 | `workbench/delivery/TRACEABILITY.md` |
 | 变更执行层 | 每次 meaningful change 从变更请求和影响分析开始 | `workbench/features/<feature>/`、`CHANGE_REQUEST.md`、`IMPACT_ANALYSIS.md` |
 | 质量证据层 | 用真实证据判断能不能继续，不靠 AI 自评 | `workbench/quality/`、`workbench/runtime/`、`VERIFY.md`、`REVIEW.md`、`.workbench-validation/` |
-| 学习升级层 | 把重复失败沉淀成模板、测试、质量门、hook、CI 或文档升级 | `workbench/feedback/`、`docs/maintenance/` |
+| 学习升级层 | 把重复失败沉淀成模板、测试、质量门、hook、CI 或文档升级 | 项目内用 `workbench/feedback/`；本插件维护仓库才使用 `docs/maintenance/` |
 
 `Agent Control` 不是一个新目录，而是控制面。它贯穿所有阶段。
 
@@ -71,9 +71,9 @@ workbench/
 | `PROJECT_STATE.md` | 当前项目事实索引：阶段、active feature、关键命令、约束和风险。 |
 | `workbench/delivery/TRACEABILITY.md` | 需求、UX、API、AI、实现和验证的追踪矩阵。 |
 | `workbench/delivery/CHANGE_LOG.md` | `light` 变更的机器可读索引。 |
-| `workbench/runtime/WORKFLOW_STATE.schema.json` | 运行时状态 schema；实际状态由脚本生成到 `.workbench-validation/workflow-state.json`。 |
+| `workbench/runtime/WORKFLOW_STATE.schema.json` | 运行时状态 schema；quality gate 状态写到 `.workbench-validation/quality-workflow-state.json`，runtime gate 状态写到 `.workbench-validation/runtime-state.json`。 |
 | `workbench/features/<feature>/FEATURE_STATUS.json` | 功能包机器状态索引；不能只靠 AI 手写后直接信任，质量门会交叉校验。 |
-| `workbench/quality/quality_gate.py` | 本地硬判定入口，检查 diff、状态、证据、review 和 marker 新鲜度。 |
+| `workbench/quality/quality_gate.py` | 本地硬判定入口，检查 diff、状态、feature/light 记录、marker 新鲜度和 scorecard 风险；证据和 review 的语义质量仍需结合独立 review、CI 或人工判断。 |
 | `.workbench-validation/` | 当前机器生成报告区，不是长期人工维护日志。 |
 | `workbench/feedback/FAILURE_LOG.md` | 重复失败、review 漏检、质量门缺口的项目级复盘位置。 |
 
@@ -150,23 +150,25 @@ CLASSIFY
 
 `quality_gate.py` 不是评分器。它的第一职责是阻断不合格状态。
 
-它至少检查：
+当前脚本已经确定性检查：
 
 - `PROJECT_INTAKE.md` 不是 draft，且无 open blocker。
-- 有受控代码或受控资产 diff 时，存在关联功能包或有效 `light` 变更记录。
+- 有受控代码或受控资产 diff 时，存在关联功能包或有效 `light` 变更记录；`light` 记录必须显式 scope 覆盖当前 diff，不能用 `*`，也不能覆盖 API、数据、权限、架构、质量门、runtime、release 等高风险路径。
 - `standard` / `strict` 有 `IMPACT_ANALYSIS.md`。
 - 未通过 `PLAN.md` / `TASKS.md` 时不能进入实现。
-- `VERIFY.md` 有真实验证证据。
-- `REVIEW.md` 没有未解决 P0/P1。
-- `strict` 更新 `TRACEABILITY.md`，或明确说明不受影响。
-- `FEATURE_STATUS.json`、Markdown、git diff、证据文件互相一致。
+- 功能包必需文件、阶段状态、任务勾选、风险档位和 `workbench_upgrade_assessment` 满足当前 profile。
+- `VERIFY.md` 标记 passed 时必须有命令、报告、截图、日志、eval、CI 或验收证据形态；strict 未验证项必须有明确 `accepted_risk`、用户确认、替代验证和 follow-up，且会写成 `passed_with_risk`；`REVIEW.md` 标记 passed 时不能同时勾选 blocking P0/P1；strict 变更必须分类 traceability 更新，并让 `IMPACT_ANALYSIS.md` 的受影响 ID 对应到 `TRACEABILITY.md` 中有验证位置的非 missing 行，或写明非影响理由。
+- `FEATURE_STATUS.json`、Markdown、git diff、scorecard report 和 marker 状态互相一致。
 - 旧 `quality-gate-ok.json` 在 diff、active feature、证据或关键基线变化后失效。
+
+不要把上述检查理解成“AI 已自动证明语义正确”。脚本能检查证据形态、状态字段和部分明显冲突；`VERIFY.md` 的证据是否真实、`REVIEW.md` 是否漏掉 P0/P1、`strict` traceability 是否覆盖完整需求宇宙、UI/a11y/eval 证据是否充分，仍需要 scorecard、独立 review、CI 或人工验收参与。没有 golden test 或 CI 覆盖的自动化拦截路径，只能标记为 `unverified`。
 
 通过后写入：
 
 ```text
 .workbench-validation/quality-gate-ok.json
-.workbench-validation/workflow-state.json
+.workbench-validation/quality-workflow-state.json
+.workbench-validation/runtime-state.json
 ```
 
 marker 必须绑定 `git_head`、`diff_hash`、`feature_id`、`commands_run`、`created_at` 和 `branch_protection` 状态。`branch_protection` 只有通过 GitHub API、`gh` 或 CI 环境确认后才能写 `verified`；否则只能写 `unverified`。
@@ -177,7 +179,7 @@ marker 必须绑定 `git_head`、`diff_hash`、`feature_id`、`commands_run`、`
 
 | 机制 | 用途 | 是否能单独放行 |
 | --- | --- | --- |
-| `quality_gate.py` | 检查 blocker、状态、diff、证据和 marker | 可以作为本地 gate |
+| `quality_gate.py` | 检查 blocker、状态、diff、feature/light 记录、scorecard 风险和 marker | 可以作为本地 gate |
 | CI status check | 合并前远程门禁 | 可以作为远程 gate |
 | `SCORECARD.md` / `scorecard.py` | 发现证据成熟度、趋势和校准问题 | 不能单独放行 |
 | 人工或独立 review | 判断产品、UX、架构、安全和 AI eval 的语义质量 | 高风险时必须参与 |
@@ -217,7 +219,7 @@ codex plugin add codex-workbench --marketplace hapibit
 默认安装 `main`，也就是仓库当前最新版本。只有复现实验、回滚问题或锁定环境时才建议固定 tag：
 
 ```bash
-codex plugin marketplace add Hapibit/codex-workbench --ref v2.0.2
+codex plugin marketplace add Hapibit/codex-workbench --ref v2.0.3
 codex plugin add codex-workbench --marketplace hapibit
 ```
 
@@ -269,16 +271,34 @@ Use Codex Workbench to audit this project workbench.
 python skills/codex-workbench/scripts/workbench.py user-workbench
 ```
 
+Windows 推荐：
+
+```powershell
+py -B skills/codex-workbench/scripts/workbench.py user-workbench
+```
+
 确认后写入：
 
 ```bash
 python skills/codex-workbench/scripts/workbench.py user-workbench --apply
 ```
 
+Windows 推荐：
+
+```powershell
+py -B skills/codex-workbench/scripts/workbench.py user-workbench --apply
+```
+
 覆盖已有用户配置需要显式 `--force`，并会生成备份：
 
 ```bash
 python skills/codex-workbench/scripts/workbench.py user-workbench --apply --force
+```
+
+Windows 推荐：
+
+```powershell
+py -B skills/codex-workbench/scripts/workbench.py user-workbench --apply --force
 ```
 
 说明见 [USER_WORKBENCH.md](docs/USER_WORKBENCH.md)。
@@ -302,6 +322,12 @@ Codex Workbench 本身可以独立使用。其他 skill、MCP 或第三方工具
 python skills/codex-workbench/scripts/check_enhancements.py --query "我要做 UI/Figma 和测试"
 ```
 
+Windows 推荐：
+
+```powershell
+py -B skills/codex-workbench/scripts/check_enhancements.py --query "我要做 UI/Figma 和测试"
+```
+
 ## 维护和发布
 
 普通使用者可以跳过本节。
@@ -311,12 +337,20 @@ python skills/codex-workbench/scripts/check_enhancements.py --query "我要做 U
 ```bash
 python skills/codex-workbench/scripts/workbench.py self-test
 python skills/codex-workbench/scripts/workbench.py golden-test
-python skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 2.0.2 --write-report
+python skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 2.0.3 --write-report
+```
+
+Windows 推荐：
+
+```powershell
+py -B skills/codex-workbench/scripts/workbench.py self-test
+py -B skills/codex-workbench/scripts/workbench.py golden-test
+py -B skills/codex-workbench/scripts/workbench.py package-check --plugin <plugin-root> --expected-version 2.0.3 --write-report
 ```
 
 发布候选必须满足：
 
-- `.codex-plugin/plugin.json` 版本是 `2.0.2`。
+- `.codex-plugin/plugin.json` 版本是 `2.0.3`。
 - 只暴露一个可见 skill：`codex-workbench`。
 - 新增模板、schema、runtime、quality、docs 都被打包。
 - `.workbench-validation/`、cache、`__pycache__`、个人路径和内部备份不进入发布包。

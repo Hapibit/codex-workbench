@@ -33,6 +33,10 @@
       "type": "string",
       "enum": ["light", "standard", "strict", "unclassified"]
     },
+    "quality_profile": {
+      "type": "string",
+      "enum": ["smoke", "standard", "full"]
+    },
     "implementation_allowed": { "type": "boolean" },
     "delivery_allowed": { "type": "boolean" },
     "source_hashes": {
@@ -41,7 +45,7 @@
     },
     "last_gate_status": {
       "type": "string",
-      "enum": ["passed", "failed", "stale", "unknown"]
+      "enum": ["passed", "passed_with_risk", "failed", "stale", "unknown"]
     },
     "branch_protection": {
       "type": "string",
@@ -50,6 +54,17 @@
     "unverified_paths": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "controlled_changed_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scorecard_decision": {
+      "type": ["string", "null"],
+      "enum": ["PASS", "PASS_WITH_RISK", "BLOCKED", null]
+    },
+    "scorecard_confidence": {
+      "type": ["string", "null"]
     }
   },
   "additionalProperties": true

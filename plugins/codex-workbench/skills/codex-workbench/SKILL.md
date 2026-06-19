@@ -117,7 +117,7 @@ When the user asks whether the plugin also configures the user's personal/global
 1. Explain that the project workbench is default and safe to generate inside a repo.
 2. Explain that user/global workbench files affect all projects and require explicit opt-in.
 3. Offer the bundled generic template under `assets/user-workbench-template/`.
-4. Preview with `python scripts/workbench.py user-workbench` before writing.
+4. Preview with `python scripts/workbench.py user-workbench` before writing. On Windows, prefer `py -B scripts/workbench.py user-workbench` when `python` is not on PATH.
 5. Use `--apply` only after explicit confirmation; use `--force` only when the user accepts replacing existing user config with backups.
 
 When the user says "set up the workbench" or similar:
@@ -209,6 +209,15 @@ python scripts/workbench.py package-check --plugin <plugin-root> --expected-vers
 python scripts/workbench.py user-workbench
 python scripts/workbench.py user-workbench --apply
 python scripts/check_enhancements.py --query "<task text>"
+```
+
+On Windows, use the Python launcher with bytecode disabled when packaging or validating release candidates:
+
+```powershell
+py -B scripts/workbench.py self-test
+py -B scripts/workbench.py golden-test
+py -B scripts/workbench.py doctor --plugin <plugin-root>
+py -B scripts/workbench.py package-check --plugin <plugin-root> --expected-version <version> --write-report
 ```
 
 Use write-enabling or overwrite flags only after explicit user confirmation:

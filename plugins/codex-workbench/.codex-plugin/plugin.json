@@ -1,6 +1,6 @@
 {
   "name": "codex-workbench",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A Codex workbench package with one visible skill entrypoint for project intake, AI coding state machines, change impact analysis, traceability, quality gates, review rules, and failure learning loops.",
   "author": {
     "name": "Hapibit"
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "Codex Workbench",
     "shortDescription": "One entry for project AI workbenches.",
-    "longDescription": "Codex Workbench exposes one visible skill entrypoint and bundles its own project-intake and workbench-generation scripts. Version 2.0.2 creates repository-local AGENTS.md/WORKBENCH.md files, project state, product/UX/architecture/delivery baselines, change requests, impact analysis, traceability, machine-readable workflow and feature status, deterministic quality/runtime gates, independent review prompts, validation/audit reports, failure-loop evidence, fail-closed hook error handling, and Windows-stable hook command entries. Third-party and specialist skills are optional capability packs: they can enhance design, diagrams, tests, docs, CI, security, or AI eval, but users do not need to learn or install them before the workbench can run.",
+    "longDescription": "Codex Workbench exposes one visible skill entrypoint and bundles its own project-intake and workbench-generation scripts. Version 2.0.3 creates repository-local AGENTS.md/WORKBENCH.md files, project state, product/UX/architecture/delivery baselines, change requests, impact analysis, traceability, machine-readable workflow and feature status, deterministic quality/runtime gates, independent review prompts, validation/audit reports, failure-loop evidence, fail-closed hook error handling, Windows-stable hook command entries, and a reader.md quick-start guide. These gates apply only after a project workbench is generated or upgraded and run; bundled hooks still require each recipient to review and trust them, and remote enforcement still depends on project CI, required checks, and branch protection. Third-party and specialist skills are optional capability packs: they can enhance design, diagrams, tests, docs, CI, security, or AI eval, but users do not need to learn or install them before the workbench can run.",
     "developerName": "Hapibit",
     "category": "Productivity",
     "capabilities": ["Write", "Automation"],

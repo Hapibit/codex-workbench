@@ -16,6 +16,8 @@ from __future__ import annotations
 import argparse
 import ast
 import filecmp
+import fnmatch
+import hashlib
 import json
 import os
 import py_compile
@@ -465,7 +467,8 @@ REQUIRED_ADAPTER_TEXT_BY_FILE = {
 }
 
 PERSONAL_PATH_PATTERNS = [
-    re.compile(r"[A-Za-z]:\\Users\\[^\\\s]+"),
+    re.compile(r"[A-Za-z]:(?:\\+)Users(?:\\+)[^\\\s\"']+"),
+    re.compile(r"[A-Za-z]:/+Users/+[^/\\\s\"']+"),
     re.compile(r"/Users/[^/\s]+"),
     re.compile(r"/home/[^/\s]+"),
 ]
@@ -552,6 +555,8 @@ REQUIRED_SKILL_FILES = [
     "SKILL.md",
     "scripts/intake.py",
     "scripts/workbench.py",
+    "scripts/workbench_lib/__init__.py",
+    "scripts/workbench_lib/generated_scripts.py",
     "scripts/check_enhancements.py",
     "assets/PROJECT_INTAKE.template.md",
     "assets/user-workbench-template/AGENTS.md",
@@ -596,6 +601,9 @@ MAINTENANCE_EVIDENCE_FILES = {
 PUBLISH_BLOCKLIST_PATTERNS = [
     re.compile(r"__pycache__"),
     re.compile(r"\.pyc$"),
+    re.compile(r"(?:^|[\\/])\.workbench-validation(?:[\\/]|$)", re.IGNORECASE),
+    re.compile(r"(?:^|[\\/])(?:\.pytest_cache|\.mypy_cache|\.ruff_cache|\.cache)(?:[\\/]|$)", re.IGNORECASE),
+    re.compile(r"(?:^|[\\/])(?:assets[\\/]assets|references[\\/]references|scripts[\\/]scripts|agents[\\/]agents)(?:[\\/]|$)", re.IGNORECASE),
     re.compile(r"(?:^|[\\/])legacy-skills(?:[\\/]|$)", re.IGNORECASE),
     re.compile(r"(?:^|[\\/])internal(?:[\\/]|$)", re.IGNORECASE),
 ]
@@ -605,6 +613,7 @@ AGENTS_MD_NEAR_LIMIT_BYTES = 24 * 1024
 
 PACKAGING_MANIFEST_REQUIRED_INCLUDES = [
     ".codex-plugin/plugin.json",
+    ".gitignore",
     "README.md",
     "hooks/**",
     "docs/CODEX_WORKBENCH_2_0_ARCHITECTURE.md",
@@ -617,6 +626,10 @@ PACKAGING_MANIFEST_REQUIRED_INCLUDES = [
 
 PACKAGING_MANIFEST_REQUIRED_EXCLUDES = [
     "internal/**",
+    "skills/codex-workbench/assets/assets/**",
+    "skills/codex-workbench/references/references/**",
+    "skills/codex-workbench/scripts/scripts/**",
+    "skills/codex-workbench/agents/agents/**",
     "**/__pycache__/**",
     "**/*.pyc",
     ".workbench-validation/**",
@@ -649,7 +662,10 @@ def rel_to(root: Path, path: Path) -> str:
 
 def read_json(path: Path) -> dict[str, Any] | None:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
+        if text.startswith("\ufeff"):
+            text = text.lstrip("\ufeff")
+        return json.loads(text)
     except Exception:
         return None
 
@@ -1148,1200 +1164,44 @@ def template_variables(project_name: str, inspection: dict[str, Any]) -> dict[st
 
 
 def generate_quality_gate_py(commands: list[dict[str, Any]]) -> str:
-    command_json = quote_json(commands)
-    feature_files_json = quote_json(FEATURE_PACKAGE_FILES)
-    allowed_dirs_json = quote_json(sorted(ALLOWED_WORKBENCH_TOP_LEVEL_DIRS))
-    version_json = json.dumps(WORKBENCH_VERSION)
-    return f'''#!/usr/bin/env python3
-from __future__ import annotations
+    from workbench_lib import generated_scripts
 
-import argparse
-import hashlib
-import json
-import re
-import shutil
-import subprocess
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-COMMANDS = {command_json}
-FEATURE_PACKAGE_FILES = {feature_files_json}
-ALLOWED_WORKBENCH_TOP_LEVEL_DIRS = set({allowed_dirs_json})
-WORKBENCH_VERSION = {version_json}
-WORKFLOW_STAGES = ["CLASSIFY", "BASELINE_CHECK", "CHANGE", "IMPACT", "ROUTE", "PLAN", "IMPLEMENT", "VERIFY", "REVIEW", "GATE", "LEARN", "DONE", "BLOCKED"]
-WORKFLOW_PROFILES = {{"light", "standard", "strict", "unclassified"}}
-FEATURE_STATUSES = {{"active", "on_hold", "complete", "blocked", "failed", "repeated_issue"}}
-WORKBENCH_UPGRADE_ASSESSMENTS = {{"required", "deferred", "not_required"}}
-
-
-def project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def rel_to(root: Path, path: Path) -> str:
-    try:
-        return path.resolve().relative_to(root.resolve()).as_posix()
-    except ValueError:
-        return str(path.resolve())
-
-
-def read_json(path: Path) -> dict:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {{}}
-
-
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    digest.update(path.read_bytes())
-    return "sha256:" + digest.hexdigest()
-
-
-def command_output(root: Path, command: list[str]) -> str:
-    try:
-        result = subprocess.run(command, cwd=str(root), text=True, capture_output=True, timeout=20)
-    except Exception:
-        return ""
-    if result.returncode != 0:
-        return ""
-    return result.stdout.strip()
-
-
-def git_head(root: Path) -> str:
-    return command_output(root, ["git", "rev-parse", "HEAD"]) or "unavailable"
-
-
-def diff_hash(root: Path) -> str:
-    try:
-        result = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=str(root), capture_output=True, timeout=30)
-        payload = result.stdout if result.returncode == 0 else b""
-    except Exception:
-        payload = b""
-    return "sha256:" + hashlib.sha256(payload).hexdigest()
-
-
-def run_scorecard(root: Path, profile: str) -> None:
-    script = root / "workbench" / "scorecard" / "scorecard.py"
-    if not script.exists():
-        raise SystemExit("[quality] scorecard.py is missing. Generate or upgrade workbench/scorecard before trusting evidence reporting.")
-    command = [sys.executable, str(script), "--profile", profile, "--write-report", "--called-from-quality-gate", "--enforce-blockers"]
-    print("[quality] scorecard evidence report")
-    result = subprocess.run(command, cwd=str(root), text=True)
-    if result.returncode != 0:
-        raise SystemExit(f"[quality] scorecard found blocking evidence gaps (exit {{result.returncode}})")
-
-
-def run_step(root: Path, step: dict) -> None:
-    name = step["name"]
-    group = step.get("group", "default")
-    cwd = root / step.get("cwd", ".")
-    command = step["command"]
-    exe = command[0]
-    if shutil.which(exe) is None:
-        raise SystemExit(f"[quality] missing command for {{name}}: {{exe}}")
-    print(f"[quality] {{name}}")
-    result = subprocess.run(command, cwd=str(cwd), text=True)
-    if result.returncode != 0:
-        raise SystemExit(f"[quality] failed: {{name}} (exit {{result.returncode}})")
-
-
-def check_project_intake(root: Path) -> str | None:
-    intake = root / "PROJECT_INTAKE.md"
-    if not intake.exists():
-        return None
-    text = intake.read_text(encoding="utf-8", errors="replace")
-    if re.search(r"(?im)^\\s*status\\s*:\\s*draft\\s*$", text):
-        raise SystemExit("[quality] PROJECT_INTAKE.md is still draft. Confirm project intake before relying on this workbench for feature or high-risk work.")
-    if re.search(r"(?im)^\\|\\s*P\\d+\\s*\\|.*\\|\\s*open\\s*\\|\\s*$", text):
-        raise SystemExit("[quality] PROJECT_INTAKE.md has open blocking project-intake questions.")
-    return str(intake.relative_to(root))
-
-
-def check_directory_contract(root: Path) -> list[str]:
-    workbench = root / "workbench"
-    if not workbench.exists():
-        return []
-    for child in sorted(workbench.iterdir(), key=lambda item: item.name.lower()):
-        if child.is_dir() and child.name not in ALLOWED_WORKBENCH_TOP_LEVEL_DIRS:
-            raise SystemExit(
-                f"[quality] undeclared workbench directory {{child.relative_to(root)}}. "
-                "Move it under a declared directory, document it in WORKBENCH.md, or upgrade the workbench directory contract."
-            )
-        if child.is_file():
-            raise SystemExit(
-                f"[quality] unexpected file directly under workbench/: {{child.relative_to(root)}}. "
-                "Put durable evidence in a declared subdirectory."
-            )
-    return ["workbench directory contract"]
-
-
-def read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
-
-
-def read_field(text: str, name: str) -> str | None:
-    match = re.search(rf"(?im)^\\s*{{re.escape(name)}}\\s*:\\s*(.+?)\\s*$", text)
-    return match.group(1).strip() if match else None
-
-
-def read_bool(text: str, name: str) -> bool:
-    return (read_field(text, name) or "").lower() == "true"
-
-
-def read_int(text: str, name: str) -> int | None:
-    value = read_field(text, name)
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except ValueError:
-        return None
-
-
-def is_placeholder_value(value: str | None) -> bool:
-    return value is None or value.strip().lower() in {{"", "unclassified", "待填写", "todo", "tbd"}}
-
-
-def workflow_stage_index(stage: str) -> int:
-    try:
-        return WORKFLOW_STAGES.index(stage.upper())
-    except ValueError:
-        return -1
-
-
-def stage_reached(current_stage: str, expected_stage: str) -> bool:
-    current = workflow_stage_index(current_stage)
-    expected = workflow_stage_index(expected_stage)
-    return current >= expected and expected >= 0
-
-
-def require_feature_field(package: Path, filename: str, field: str, expected: str | bool) -> None:
-    text = read_text(package / filename)
-    value = read_bool(text, field) if isinstance(expected, bool) else (read_field(text, field) or "").lower()
-    if value != expected:
-        raise SystemExit(f"[quality] feature package {{package.relative_to(project_root())}} is not complete: {{filename}} {{field}} must be {{expected}}")
-
-
-def require_feature_status(package: Path, filename: str, allowed: set[str]) -> str:
-    text = read_text(package / filename)
-    status = (read_field(text, "status") or "").lower()
-    if status not in allowed:
-        raise SystemExit(f"[quality] feature package {{package.relative_to(project_root())}} has invalid {{filename}} status: {{status or 'missing'}}")
-    return status
-
-
-def check_feature_packages(root: Path) -> list[str]:
-    feature_root = root / "workbench" / "features"
-    if not feature_root.exists():
-        return []
-    packages = [item for item in sorted(feature_root.iterdir()) if item.is_dir()]
-    checked: list[str] = []
-    for package in packages:
-        missing = [rel for rel in FEATURE_PACKAGE_FILES if not (package / rel).exists()]
-        if missing:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is missing files: {{', '.join(missing)}}")
-        status_json = read_json(package / "FEATURE_STATUS.json")
-        if status_json.get("schema") != "codex-workbench-feature-status/v2":
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has missing or invalid FEATURE_STATUS.json schema")
-        feature_status = str(status_json.get("feature_status") or "active").lower()
-        current_stage = str(status_json.get("current_stage") or "CHANGE").upper()
-        workflow_profile = str(status_json.get("workflow_profile") or "unclassified").lower()
-        required_artifacts = status_json.get("required_artifacts") if isinstance(status_json.get("required_artifacts"), list) else []
-        missing_required_artifacts = [rel for rel in FEATURE_PACKAGE_FILES if rel != "FEATURE_STATUS.json" and rel not in required_artifacts]
-        if missing_required_artifacts:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} FEATURE_STATUS.json is missing required_artifacts: {{', '.join(missing_required_artifacts)}}")
-        if feature_status not in FEATURE_STATUSES:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid feature_status: {{feature_status}}")
-        if current_stage not in set(WORKFLOW_STAGES):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid current_stage: {{current_stage}}")
-        if workflow_profile not in WORKFLOW_PROFILES:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid workflow_profile: {{workflow_profile}}")
-        if feature_status == "on_hold":
-            checked.append(str(package.relative_to(root)) + " (on_hold)")
-            continue
-
-        change_text = read_text(package / "CHANGE_REQUEST.md")
-        impact_text = read_text(package / "IMPACT_ANALYSIS.md")
-        spec_text = read_text(package / "SPEC.md")
-        design_text = read_text(package / "DESIGN.md")
-        plan_text = read_text(package / "PLAN.md")
-        tasks_text = read_text(package / "TASKS.md")
-        verify_text = read_text(package / "VERIFY.md")
-        review_text = read_text(package / "REVIEW.md")
-        change_status = (read_field(change_text, "status") or "draft").lower()
-        impact_status = (read_field(impact_text, "status") or "draft").lower()
-        spec_status = require_feature_status(package, "SPEC.md", {{"draft", "approved", "blocked"}})
-        design_status = require_feature_status(package, "DESIGN.md", {{"draft", "approved", "blocked"}})
-        plan_status = require_feature_status(package, "PLAN.md", {{"draft", "approved", "blocked"}})
-        tasks_status = require_feature_status(package, "TASKS.md", {{"draft", "ready", "blocked"}})
-        verify_status = require_feature_status(package, "VERIFY.md", {{"missing", "partial", "passed", "failed", "blocked"}})
-        review_status = require_feature_status(package, "REVIEW.md", {{"pending", "passed", "failed", "blocked"}})
-        workbench_upgrade_assessment = (read_field(review_text, "workbench_upgrade_assessment") or "unassessed").lower()
-        if workbench_upgrade_assessment == "unassessed" and (verify_status in {{"failed", "blocked"}} or review_status in {{"failed", "blocked"}} or current_stage == "DONE" or feature_status in {{"complete", "failed", "blocked", "repeated_issue"}}):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} must set REVIEW.md workbench_upgrade_assessment before passing quality gate")
-        if workbench_upgrade_assessment != "unassessed" and workbench_upgrade_assessment not in WORKBENCH_UPGRADE_ASSESSMENTS:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid workbench_upgrade_assessment: {{workbench_upgrade_assessment}}")
-        risk_level = (read_field(spec_text, "risk_level") or "unclassified").lower()
-        spec_profile = (read_field(spec_text, "workflow_profile") or "unclassified").lower()
-        impact_score = read_int(spec_text, "impact_score")
-        uncertainty_score = read_int(spec_text, "uncertainty_score")
-        rollback_score = read_int(spec_text, "rollback_score")
-        risk_score = read_int(spec_text, "risk_score")
-        hard_triggers = read_field(spec_text, "hard_triggers")
-        classification_reason = read_field(spec_text, "classification_reason")
-        if risk_level not in WORKFLOW_PROFILES:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid risk_level: {{risk_level}}")
-        if spec_profile not in WORKFLOW_PROFILES:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid SPEC.md workflow_profile: {{spec_profile}}")
-        component_scores = [impact_score, uncertainty_score, rollback_score]
-        if any(score is None or score < 0 or score > 3 for score in component_scores):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid impact/uncertainty/rollback risk scores")
-        if risk_score is None or risk_score < 0 or risk_score > 9:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} has invalid risk_score")
-        if risk_score != sum(component_scores):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} risk_score must equal impact_score + uncertainty_score + rollback_score")
-        if is_placeholder_value(hard_triggers) or is_placeholder_value(classification_reason):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is missing risk classification evidence in SPEC.md")
-        if risk_score >= 6 and workflow_profile != "strict":
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} workflow_profile is too low for risk_score >= 6")
-        if risk_score >= 3 and workflow_profile == "light":
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} workflow_profile is too low for risk_score >= 3")
-        if stage_reached(current_stage, "PLAN") and change_status not in {{"ready", "approved"}}:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before CHANGE_REQUEST.md was ready")
-        if stage_reached(current_stage, "PLAN") and impact_status not in {{"ready", "approved"}}:
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before IMPACT_ANALYSIS.md was ready")
-        if stage_reached(current_stage, "PLAN") and (spec_status != "approved" or not read_bool(spec_text, "approved_for_plan")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before SPEC was approved")
-        if stage_reached(current_stage, "PLAN") and (design_status != "approved" or not read_bool(design_text, "approved_for_plan")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached PLAN before DESIGN was approved")
-        if stage_reached(current_stage, "IMPLEMENT") and (plan_status != "approved" or not read_bool(plan_text, "approved_for_tasks")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached TASKS before PLAN was approved for tasks")
-        if stage_reached(current_stage, "IMPLEMENT") and (not read_bool(plan_text, "approved_for_implementation") or tasks_status != "ready" or not read_bool(tasks_text, "ready_for_implementation")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached IMPLEMENT before PLAN/TASKS allowed implementation")
-        if stage_reached(current_stage, "REVIEW") and verify_status != "passed":
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached REVIEW before VERIFY passed")
-        if current_stage == "DONE" and review_status != "passed":
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} reached complete before REVIEW passed")
-        if feature_status != "complete":
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is {{feature_status}}. Set feature_status to on_hold for paused work, or complete it before passing the final quality gate.")
-        if bool(status_json.get("implementation_allowed")) and (not read_bool(plan_text, "approved_for_implementation") or not read_bool(tasks_text, "ready_for_implementation")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} FEATURE_STATUS.json allows implementation before PLAN/TASKS allow it")
-        if bool(status_json.get("delivery_allowed")) and (verify_status != "passed" or review_status != "passed"):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} FEATURE_STATUS.json allows delivery before VERIFY/REVIEW pass")
-        require_feature_field(package, "SPEC.md", "approved_for_plan", True)
-        require_feature_field(package, "DESIGN.md", "approved_for_plan", True)
-        require_feature_field(package, "PLAN.md", "approved_for_tasks", True)
-        require_feature_field(package, "PLAN.md", "approved_for_implementation", True)
-        require_feature_field(package, "TASKS.md", "ready_for_implementation", True)
-        require_feature_field(package, "VERIFY.md", "status", "passed")
-        require_feature_field(package, "REVIEW.md", "status", "passed")
-        if not bool(status_json.get("implementation_allowed")) or not bool(status_json.get("delivery_allowed")):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} is complete but FEATURE_STATUS.json has not allowed implementation and delivery")
-        if re.search(r"(?m)^- \\[ \\]", tasks_text):
-            raise SystemExit(f"[quality] feature package {{package.relative_to(root)}} still has unchecked task items")
-        if workflow_profile == "strict" and "accepted_risk" in verify_text and "false" in verify_text.lower() and "无法验证" in verify_text:
-            raise SystemExit(f"[quality] strict feature {{package.relative_to(root)}} has unaccepted verification risk")
-        checked.append(str(package.relative_to(root)))
-    return checked
-
-
-def generate_workflow_state(root: Path, active_feature: str | None, current_stage: str, profile: str, checks_run: list[str]) -> dict:
-    source_hashes = {{}}
-    for rel in [
-        "PROJECT_INTAKE.md",
-        "PROJECT_STATE.md",
-        "workbench/delivery/TRACEABILITY.md",
-        "workbench/delivery/CHANGE_LOG.md",
-    ]:
-        path = root / rel
-        if path.exists():
-            source_hashes[rel] = file_sha256(path)
-    return {{
-        "schema": "codex-workbench-workflow-state/v2",
-        "workbench_version": WORKBENCH_VERSION,
-        "generated_by": "quality_gate.py",
-        "created_at": utc_now(),
-        "project_root": str(root),
-        "git_head": git_head(root),
-        "diff_hash": diff_hash(root),
-        "active_feature": active_feature,
-        "current_stage": current_stage,
-        "workflow_profile": profile,
-        "implementation_allowed": False,
-        "delivery_allowed": False,
-        "source_hashes": source_hashes,
-        "last_gate_status": "passed",
-        "branch_protection": "unverified",
-        "unverified_paths": ["branch_protection"],
-        "checks_run": checks_run,
-    }}
-
-
-def stale_marker_reason(root: Path) -> str | None:
-    marker = root / ".workbench-validation" / "quality-gate-ok.json"
-    if not marker.exists():
-        return None
-    data = read_json(marker)
-    if not data:
-        return "marker is not valid json"
-    current_diff = diff_hash(root)
-    if data.get("diff_hash") and data.get("diff_hash") != current_diff:
-        return "diff_hash changed since last quality gate"
-    return None
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--allow-empty", action="store_true")
-    parser.add_argument("--profile", choices=["smoke", "standard", "full"], default="standard")
-    parser.add_argument("--skip", action="append", default=[], help="Skip a command group such as docker, node, or maven.")
-    args = parser.parse_args()
-
-    root = project_root()
-    selected = [
-        cmd
-        for cmd in COMMANDS
-        if cmd.get("group") not in set(args.skip)
-        and args.profile in set(cmd.get("profiles", ["standard"]))
-    ]
-    print(f"[quality] profile={{args.profile}}")
-    checks_run: list[str] = []
-    checked_intake = check_project_intake(root)
-    if checked_intake:
-        print(f"[quality] checked project intake: {{checked_intake}}")
-        checks_run.append("project intake blockers")
-    for checked_contract in check_directory_contract(root):
-        print(f"[quality] checked {{checked_contract}}")
-        checks_run.append(checked_contract)
-    marker_reason = stale_marker_reason(root)
-    if marker_reason:
-        print(f"[quality] previous marker is stale: {{marker_reason}}")
-        checks_run.append("stale marker invalidated")
-    checked_features = check_feature_packages(root)
-    if checked_features:
-        print(f"[quality] checked 2.0 feature packages: {{', '.join(checked_features)}}")
-        checks_run.append("2.0 feature package structure")
-    if not selected and not args.allow_empty:
-        raise SystemExit(f"[quality] no checks configured for profile {{args.profile}}. Update workbench/quality/quality_gate.py or pass --allow-empty only for docs-only projects.")
-    for step in selected:
-        run_step(root, step)
-        checks_run.append(step["name"])
-    run_scorecard(root, args.profile)
-    checks_run.append("scorecard evidence report")
-
-    marker_dir = root / ".workbench-validation"
-    marker_dir.mkdir(parents=True, exist_ok=True)
-    active_feature = checked_features[0] if len(checked_features) == 1 else None
-    workflow_state = generate_workflow_state(root, active_feature, "GATE", args.profile, checks_run)
-    workflow_state_path = marker_dir / "workflow-state.json"
-    workflow_state_path.write_text(json.dumps(workflow_state, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
-    marker = marker_dir / "quality-gate-ok.json"
-    marker.write_text(json.dumps({{
-        "schema": "codex-workbench-quality-gate-marker/v2",
-        "workbench_version": WORKBENCH_VERSION,
-        "gate": "quality-gate",
-        "status": "passed",
-        "created_at": utc_now(),
-        "projectRoot": str(root),
-        "git_head": workflow_state["git_head"],
-        "diff_hash": workflow_state["diff_hash"],
-        "feature_id": active_feature,
-        "profile": args.profile,
-        "commands_run": [step["name"] for step in selected],
-        "checks_run": checks_run,
-        "report_id": "qg-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
-        "workflow_state": str(workflow_state_path),
-        "branch_protection": "unverified",
-    }}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
-    print(f"[quality] wrote {{workflow_state_path}}")
-    print(f"[quality] wrote {{marker}}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''
+    return generated_scripts.generate_quality_gate_py(
+        commands,
+        FEATURE_PACKAGE_FILES,
+        ALLOWED_WORKBENCH_TOP_LEVEL_DIRS,
+        WORKBENCH_VERSION,
+    )
 
 
 def generate_scorecard_py() -> str:
-    feature_files_json = quote_json(FEATURE_PACKAGE_FILES)
-    required_adapter_files_json = quote_json(REQUIRED_ADAPTER_FILES)
-    script = r'''#!/usr/bin/env python3
-from __future__ import annotations
+    from workbench_lib import generated_scripts
 
-import argparse
-import json
-import re
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-FEATURE_PACKAGE_FILES = __FEATURE_PACKAGE_FILES__
-REQUIRED_ADAPTER_FILES = __REQUIRED_ADAPTER_FILES__
-
-WEIGHTS = {
-    "intake": 15,
-    "product": 15,
-    "design": 10,
-    "architecture": 15,
-    "delivery": 10,
-    "features": 20,
-    "verification": 10,
-    "feedback": 5,
-}
-
-PROFILE_RULES = {
-    "smoke": {
-        "reference_score": 60,
-        "max_blockers": 0,
-        "min_component_percent": 20,
-        "require_calibration": False,
-        "require_semantic_review": False,
-        "component_floor_is_blocker": False,
-        "score_is_gate": False,
-    },
-    "standard": {
-        "reference_score": 75,
-        "max_blockers": 0,
-        "min_component_percent": 50,
-        "require_calibration": False,
-        "require_semantic_review": False,
-        "component_floor_is_blocker": False,
-        "score_is_gate": False,
-    },
-    "full": {
-        "reference_score": 85,
-        "max_blockers": 0,
-        "min_component_percent": 60,
-        "require_calibration": True,
-        "require_semantic_review": True,
-        "component_floor_is_blocker": False,
-        "score_is_gate": False,
-    },
-}
-
-STATUS_PATTERN = re.compile(r"(?im)^\s*status\s*:\s*([a-zA-Z_-]+)\s*$")
-ACCEPTED_REVIEW_STATUSES = {"passed", "accepted_with_risk", "not_required"}
-ACCEPTED_CALIBRATION_STATUSES = {"calibrated", "reviewed", "accepted_with_risk"}
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
-
-def read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8", errors="replace")
-    except Exception:
-        return ""
-
-
-def field(text: str, name: str) -> str | None:
-    match = re.search(rf"(?im)^\s*{re.escape(name)}\s*:\s*(.+?)\s*$", text)
-    return match.group(1).strip() if match else None
-
-
-def status_of(path: Path) -> str | None:
-    text = read_text(path)
-    match = STATUS_PATTERN.search(text)
-    return match.group(1).strip().lower() if match else None
-
-
-def has_open_blockers(text: str, prefix: str) -> bool:
-    return bool(re.search(rf"(?im)^\|\s*{prefix}\d+\s*\|.*\|\s*open\s*\|\s*$", text))
-
-
-def is_placeholder_cell(cell: str, placeholder_values: set[str]) -> bool:
-    normalized = cell.strip()
-    if normalized in placeholder_values:
-        return True
-    if not normalized:
-        return True
-    if normalized.startswith("`") and normalized.endswith("`"):
-        return True
-    if normalized.lower() in {"pending", "draft", "open", "unconfirmed", "project owner", "must"}:
-        return True
-    if re.fullmatch(r"[A-Z]{1,4}\d{3,}", normalized):
-        return True
-    if re.fullmatch(r"(FP|FN|I|B)\d{3,}", normalized):
-        return True
-    if normalized.endswith(".md") or normalized.endswith(".json"):
-        return True
-    if "待补充" in normalized or "作为..." in normalized or "Given/When/Then" in normalized:
-        return True
-    if "/" in normalized and any(part.strip().lower() in {"low", "medium", "high", "prototype-only", "usable-with-known-risks", "release-ready"} for part in normalized.split("/")):
-        return True
-    return False
-
-
-def contains_filled_table_row(text: str) -> bool:
-    placeholder_values = {
-        "",
-        "\u7f16\u53f7", "\u6765\u6e90", "\u95ee\u9898", "\u5904\u7406\u72b6\u6001", "\u4fee\u590d\u4f4d\u7f6e",
-        "\u9879\u76ee", "\u7ed3\u8bba", "\u8bc1\u636e\u4f4d\u7f6e", "\u98ce\u9669/\u52a8\u4f5c",
-        "\u7ef4\u5ea6", "\u6863\u4f4d", "\u603b\u5206", "\u7b49\u7ea7", "\u786c\u963b\u585e\u6570", "\u4e3b\u8981\u98ce\u9669",
-        "\u6837\u4f8b", "\u9884\u671f\u8bc4\u5206", "\u7406\u7531",
-        "\u62bd\u67e5\u4eba", "\u6837\u672c", "\u4eba\u5de5\u7ed3\u8bba", "\u811a\u672c\u7ed3\u8bba",
-        "\u5dee\u5f02", "\u540e\u7eed\u52a8\u4f5c", "\u65e5\u671f", "\u8c03\u6574", "\u4f9d\u636e",
-        "\u9879\u76ee\u72b6\u6001", "\u9884\u671f\u7b49\u7ea7", "\u9884\u671f\u53ef\u4fe1\u5ea6", "\u590d\u6838\u4eba",
-        "\u9700\u6c42", "\u7528\u6237/\u89d2\u8272", "\u4f18\u5148\u7ea7", "\u72b6\u6001",
-        "\u7528\u6237\u6545\u4e8b", "\u9a8c\u6536\u6807\u51c6", "\u5931\u8d25\u8def\u5f84", "\u5bf9\u5e94\u529f\u80fd\u5305",
-    }
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("|") or "---" in stripped:
-            continue
-        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-        meaningful = [cell for cell in cells if not is_placeholder_cell(cell, placeholder_values)]
-        if len(cells) >= 3 and meaningful:
-            return True
-    return False
-
-
-def section_between(text: str, heading: str) -> str:
-    match = re.search(rf"(?ms)^##\s+{re.escape(heading)}\s*$([\s\S]*?)(?=^##\s+|\Z)", text)
-    return match.group(1) if match else ""
-
-
-def has_unchecked_item(path: Path) -> bool:
-    return bool(re.search(r"(?m)^- \[ \]", read_text(path)))
-
-
-def score_file_status(root: Path, rel: str, accepted: set[str], full_points: int, partial_points: int = 1) -> tuple[int, list[str], list[str]]:
-    path = root / rel
-    if not path.exists():
-        return 0, [f"missing {rel}"], []
-    status = status_of(path)
-    if status in accepted:
-        return full_points, [], []
-    if status == "draft":
-        return partial_points, [], [f"{rel} is still draft"]
-    return 0, [f"{rel} has invalid or missing status"], []
-
-
-def component_result(name: str, score: int, max_score: int, blockers: list[str], warnings: list[str]) -> dict:
-    score = max(0, min(score, max_score))
-    return {
-        "name": name,
-        "score": score,
-        "maxScore": max_score,
-        "percent": round(score * 100 / max_score, 1) if max_score else 0,
-        "blockers": blockers,
-        "warnings": warnings,
-    }
-
-
-def profile_rules(profile: str) -> dict:
-    return PROFILE_RULES.get(profile, PROFILE_RULES["standard"])
-
-
-def score_intake(root: Path) -> dict:
-    rel = "PROJECT_INTAKE.md"
-    text = read_text(root / rel)
-    score, blockers, warnings = score_file_status(root, rel, {"confirmed"}, WEIGHTS["intake"], 5)
-    required_terms = ["\u9879\u76ee\u76ee\u6807", "\u7b2c\u4e00\u7248\u8303\u56f4", "AI \u4f7f\u7528\u8fb9\u754c", "\u9a8c\u6536", "\u963b\u585e\u95ee\u9898"]
-    missing_terms = [term for term in required_terms if term not in text]
-    score -= len(missing_terms) * 2
-    warnings.extend([f"PROJECT_INTAKE.md missing section cue: {term}" for term in missing_terms])
-    if has_open_blockers(text, "P"):
-        blockers.append("PROJECT_INTAKE.md has open blocking questions")
-    return component_result("intake", score, WEIGHTS["intake"], blockers, warnings)
-
-
-def score_product(root: Path) -> dict:
-    blockers: list[str] = []
-    warnings: list[str] = []
-    score = 0
-    for rel in ("workbench/product/PRODUCT_BRIEF.md", "workbench/product/PRD.md", "workbench/product/ROADMAP.md"):
-        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed"}, 4, 1)
-        score += part
-        blockers.extend(part_blockers)
-        warnings.extend(part_warnings)
-    prd = read_text(root / "workbench/product/PRD.md")
-    if contains_filled_table_row(prd):
-        score += 3
-    else:
-        warnings.append("PRD.md has no filled requirement/story evidence")
-    return component_result("product", score, WEIGHTS["product"], blockers, warnings)
-
-
-def score_design(root: Path) -> dict:
-    blockers: list[str] = []
-    warnings: list[str] = []
-    score = 0
-    for rel in ("workbench/design/UX_SPEC.md", "workbench/design/PROTOTYPE.md", "workbench/design/USER_FLOW.md"):
-        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed"}, 3, 1)
-        score += part
-        blockers.extend(part_blockers)
-        warnings.extend(part_warnings)
-    ux = read_text(root / "workbench/design/UX_SPEC.md")
-    if all(term in ux for term in ("\u5931\u8d25", "\u6743\u9650", "\u53ef\u8bbf\u95ee\u6027")):
-        score += 1
-    else:
-        warnings.append("UX_SPEC.md should cover failure, permission, and accessibility states")
-    return component_result("design", score, WEIGHTS["design"], blockers, warnings)
-
-
-def score_architecture(root: Path) -> dict:
-    blockers: list[str] = []
-    warnings: list[str] = []
-    score = 0
-    for rel in (
-        "workbench/architecture/ARCHITECTURE.md",
-        "workbench/architecture/DATA_MODEL.md",
-        "workbench/architecture/API_DESIGN.md",
-        "workbench/architecture/AI_DESIGN.md",
-    ):
-        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed"}, 3, 1)
-        score += part
-        blockers.extend(part_blockers)
-        warnings.extend(part_warnings)
-    arch = read_text(root / "workbench/architecture/ARCHITECTURE.md")
-    if all(term in arch for term in ("\u8d28\u91cf\u5c5e\u6027", "\u98ce\u9669", "\u9a8c\u8bc1\u65b9\u5f0f")):
-        score += 3
-    else:
-        warnings.append("ARCHITECTURE.md should include quality attributes, risks, and verification method")
-    return component_result("architecture", score, WEIGHTS["architecture"], blockers, warnings)
-
-
-def score_delivery(root: Path) -> dict:
-    blockers: list[str] = []
-    warnings: list[str] = []
-    score = 0
-    for rel in ("workbench/delivery/RELEASE_PLAN.md", "workbench/delivery/ITERATION_PLAN.md", "workbench/delivery/TASK_BREAKDOWN.md"):
-        part, part_blockers, part_warnings = score_file_status(root, rel, {"approved", "confirmed", "active"}, 3, 1)
-        score += part
-        blockers.extend(part_blockers)
-        warnings.extend(part_warnings)
-    release = read_text(root / "workbench/delivery/RELEASE_PLAN.md")
-    if "\u56de\u6eda" in release:
-        score += 1
-    else:
-        warnings.append("RELEASE_PLAN.md should include rollback evidence")
-    return component_result("delivery", score, WEIGHTS["delivery"], blockers, warnings)
-
-
-def score_features(root: Path) -> dict:
-    feature_root = root / "workbench" / "features"
-    blockers: list[str] = []
-    warnings: list[str] = []
-    if not feature_root.exists():
-        return component_result("features", 8, WEIGHTS["features"], blockers, ["No feature packages yet; acceptable before feature development"])
-    packages = [item for item in sorted(feature_root.iterdir()) if item.is_dir()]
-    if not packages:
-        return component_result("features", 8, WEIGHTS["features"], blockers, ["workbench/features exists but has no feature package"])
-    package_scores: list[int] = []
-    for package in packages:
-        rel_package = package.relative_to(root).as_posix()
-        missing = [filename for filename in FEATURE_PACKAGE_FILES if not (package / filename).exists()]
-        if missing:
-            blockers.append(f"{rel_package} missing files: {', '.join(missing)}")
-            package_scores.append(0)
-            continue
-        status_data = {}
-        try:
-            status_data = json.loads(read_text(package / "FEATURE_STATUS.json"))
-        except Exception:
-            blockers.append(f"{rel_package} FEATURE_STATUS.json is not valid json")
-            package_scores.append(0)
-            continue
-        feature_status = str(status_data.get("feature_status") or "active").lower()
-        current_stage = str(status_data.get("current_stage") or "CHANGE").upper()
-        if feature_status == "on_hold":
-            package_scores.append(12)
-            continue
-        if feature_status != "complete":
-            warnings.append(f"{rel_package} is {feature_status} at {current_stage}")
-            package_scores.append(8)
-            continue
-        verify_status = (field(read_text(package / "VERIFY.md"), "status") or "missing").lower()
-        review_status = (field(read_text(package / "REVIEW.md"), "status") or "pending").lower()
-        if verify_status == "passed" and review_status == "passed" and not has_unchecked_item(package / "TASKS.md") and bool(status_data.get("delivery_allowed")):
-            package_scores.append(20)
-        else:
-            blockers.append(f"{rel_package} complete but VERIFY/REVIEW/status gates are not consistent")
-            package_scores.append(12)
-    score = min(package_scores) if package_scores else 8
-    return component_result("features", score, WEIGHTS["features"], blockers, warnings)
-
-
-def score_verification(root: Path, called_from_quality_gate: bool) -> dict:
-    blockers: list[str] = []
-    warnings: list[str] = []
-    marker = root / ".workbench-validation" / "quality-gate-ok.json"
-    score = 0
-    if marker.exists():
-        score += 4
-    elif called_from_quality_gate:
-        warnings.append(".workbench-validation/quality-gate-ok.json is not expected yet because scorecard is running inside the current quality gate")
-        score += 2
-    else:
-        warnings.append(".workbench-validation/quality-gate-ok.json is missing; treat this as historical gate evidence, not current proof")
-    quality_gate = root / "workbench" / "quality" / "quality_gate.py"
-    gate_text = read_text(quality_gate)
-    if quality_gate.exists() and "run_scorecard" in gate_text and "--called-from-quality-gate" in gate_text:
-        score += 6
-    elif quality_gate.exists() and "run_scorecard" in gate_text:
-        score += 4
-        warnings.append("quality_gate.py calls scorecard.py but does not pass --called-from-quality-gate")
-    else:
-        blockers.append("quality_gate.py does not call scorecard.py for evidence reporting")
-    return component_result("verification", score, WEIGHTS["verification"], blockers, warnings)
-
-
-def score_feedback(root: Path) -> dict:
-    blockers: list[str] = []
-    warnings: list[str] = []
-    score = 0
-    for rel in ("workbench/feedback/FAILURE_LOG.md", "workbench/feedback/ITERATION_LOG.md", "workbench/feedback/AI_EFFECTIVENESS.md"):
-        if (root / rel).exists():
-            score += 1
-        else:
-            blockers.append(f"missing {rel}")
-    effectiveness = read_text(root / "workbench/feedback/AI_EFFECTIVENESS.md")
-    if "\u8fd4\u5de5" in effectiveness and "\u8d28\u91cf\u95e8" in effectiveness:
-        score += 2
-    else:
-        warnings.append("AI_EFFECTIVENESS.md should track rework and quality-gate failures")
-    return component_result("feedback", score, WEIGHTS["feedback"], blockers, warnings)
-
-
-def score_calibration(root: Path) -> tuple[dict, list[str], list[str]]:
-    path = root / "workbench" / "scorecard" / "CALIBRATION.md"
-    scorecard_path = root / "workbench" / "scorecard" / "SCORECARD.md"
-    text = read_text(path)
-    scorecard = read_text(scorecard_path)
-    blockers: list[str] = []
-    warnings: list[str] = []
-    status = (field(text, "calibration_status") or field(scorecard, "calibration_status") or "missing").lower()
-    has_anchor_examples = contains_filled_table_row(section_between(text, "\u951a\u5b9a\u6837\u4f8b"))
-    has_human_spotcheck = contains_filled_table_row(section_between(text, "\u4eba\u5de5\u62bd\u67e5"))
-    has_false_positive_record = "\u8bef\u62a5" in text
-    has_false_negative_record = "\u6f0f\u62a5" in text
-    has_reference_line_change_log = "\u53c2\u8003\u7ebf\u8c03\u6574" in text
-    has_threshold_change_log = has_reference_line_change_log or "\u9608\u503c\u8c03\u6574" in text
-    if not path.exists():
-        blockers.append("CALIBRATION.md is missing")
-    if status == "missing":
-        warnings.append("CALIBRATION.md missing calibration_status")
-    elif status not in ACCEPTED_CALIBRATION_STATUSES:
-        warnings.append(f"CALIBRATION.md calibration_status is {status}, not calibrated/reviewed/accepted_with_risk")
-    if not has_anchor_examples:
-        warnings.append("CALIBRATION.md has no filled anchor-example evidence")
-    if not has_human_spotcheck:
-        warnings.append("CALIBRATION.md has no filled human spot-check evidence")
-    return {
-        "status": status,
-        "acceptedStatuses": sorted(ACCEPTED_CALIBRATION_STATUSES),
-        "hasAnchorExamples": has_anchor_examples,
-        "hasHumanSpotcheck": has_human_spotcheck,
-        "tracksFalsePositives": has_false_positive_record,
-        "tracksFalseNegatives": has_false_negative_record,
-        "hasReferenceLineChangeLog": has_reference_line_change_log,
-        "hasThresholdChangeLog": has_threshold_change_log,
-        "isCalibrated": status in ACCEPTED_CALIBRATION_STATUSES and has_anchor_examples and has_human_spotcheck,
-    }, blockers, warnings
-
-
-def score_semantic_review(root: Path, require_semantic_review: bool) -> tuple[dict, list[str], list[str]]:
-    scorecard = read_text(root / "workbench" / "scorecard" / "SCORECARD.md")
-    blockers: list[str] = []
-    warnings: list[str] = []
-    semantic_status = (field(scorecard, "semantic_review_status") or "missing").lower()
-    if semantic_status not in ACCEPTED_REVIEW_STATUSES:
-        message = "SCORECARD.md semantic_review_status is not passed, accepted_with_risk, or not_required"
-        if require_semantic_review:
-            blockers.append(message)
-        else:
-            warnings.append(message)
-    architecture_status = (field(scorecard, "architecture_review_status") or "missing").lower()
-    if architecture_status not in ACCEPTED_REVIEW_STATUSES:
-        message = "SCORECARD.md architecture_review_status is not passed, accepted_with_risk, or not_required"
-        if require_semantic_review:
-            blockers.append(message)
-        else:
-            warnings.append(message)
-    if "\u786c\u963b\u585e" not in scorecard or "\u67b6\u6784\u5408\u7406\u6027" not in scorecard:
-        blockers.append("SCORECARD.md is missing scorecard structure cues")
-    return {
-        "semanticReviewStatus": semantic_status,
-        "architectureReviewStatus": architecture_status,
-        "acceptedStatuses": sorted(ACCEPTED_REVIEW_STATUSES),
-        "required": require_semantic_review,
-    }, blockers, warnings
-
-
-def component_floor_violations(components: list[dict], min_percent: int) -> list[dict]:
-    return [
-        {
-            "component": component["name"],
-            "percent": component["percent"],
-            "minPercent": min_percent,
-        }
-        for component in components
-        if component["percent"] < min_percent
-    ]
-
-
-def confidence_level(blockers: list[str], warnings: list[str], calibration: dict, semantic_review: dict, floor_violations: list[dict]) -> tuple[str, list[str]]:
-    reasons: list[str] = []
-    if blockers:
-        reasons.append("Blockers exist; the score cannot be used as pass evidence.")
-        return "low", reasons
-    if floor_violations:
-        reasons.append("A component floor violation may hide local risk behind a good total score.")
-    if not calibration["isCalibrated"]:
-        reasons.append("The scoring rubric has not been calibrated with anchor examples and human spot checks.")
-    if semantic_review["semanticReviewStatus"] not in ACCEPTED_REVIEW_STATUSES:
-        reasons.append("Semantic review is incomplete or failed.")
-    if semantic_review["architectureReviewStatus"] not in ACCEPTED_REVIEW_STATUSES:
-        reasons.append("Architecture review is incomplete or failed.")
-    if len(warnings) >= 10:
-        reasons.append("Too many warnings; manually review score confidence.")
-    if not reasons:
-        return "high", ["No obvious blockers, component floor gaps, calibration gaps, or semantic-review gaps."]
-    if len(reasons) >= 3 or floor_violations:
-        return "low", reasons
-    return "medium", reasons
-
-
-def calculate(root: Path, profile: str, called_from_quality_gate: bool = False) -> dict:
-    rules = profile_rules(profile)
-    components = [
-        score_intake(root),
-        score_product(root),
-        score_design(root),
-        score_architecture(root),
-        score_delivery(root),
-        score_features(root),
-        score_verification(root, called_from_quality_gate),
-        score_feedback(root),
-    ]
-    semantic_review, semantic_blockers, semantic_warnings = score_semantic_review(root, rules["require_semantic_review"])
-    calibration, calibration_blockers, calibration_warnings = score_calibration(root)
-    total = sum(component["score"] for component in components)
-    max_total = sum(component["maxScore"] for component in components)
-    floor_violations = component_floor_violations(components, rules["min_component_percent"])
-    blockers = semantic_blockers[:] + calibration_blockers[:]
-    warnings = semantic_warnings[:] + calibration_warnings[:]
-    for component in components:
-        blockers.extend(component["blockers"])
-        warnings.extend(component["warnings"])
-    if rules["require_calibration"] and not calibration["isCalibrated"]:
-        blockers.append("full profile requires calibrated scorecard evidence in CALIBRATION.md")
-    for violation in floor_violations:
-        message = f"{violation['component']} component {violation['percent']}% is below {violation['minPercent']}% floor for {profile}"
-        if rules["component_floor_is_blocker"]:
-            blockers.append(message)
-        else:
-            warnings.append(message)
-    percentage = round(total * 100 / max_total, 1) if max_total else 0
-    confidence, confidence_reasons = confidence_level(blockers, warnings, calibration, semantic_review, floor_violations)
-    if blockers:
-        level = "blocked"
-    elif percentage >= 90:
-        level = "release-ready"
-    elif percentage >= 75:
-        level = "usable-with-known-risks"
-    elif percentage >= 60:
-        level = "prototype-only"
-    else:
-        level = "not-ready"
-    if blockers:
-        decision = "BLOCKED"
-    elif confidence == "high":
-        decision = "PASS"
-    else:
-        decision = "PASS_WITH_RISK"
-    return {
-        "schema": "codex-workbench-scorecard/v1",
-        "timestamp": utc_now(),
-        "projectRoot": str(root),
-        "profile": profile,
-        "calledFromQualityGate": called_from_quality_gate,
-        "profileRules": rules,
-        "scoreMeaning": "evidence_maturity_and_process_consistency_only",
-        "decision": decision,
-        "decisionMeaning": "BLOCKED blocks delivery; PASS_WITH_RISK requires human review of warnings, confidence, calibration, and semantic review before treating the work as done.",
-        "totalScore": total,
-        "maxScore": max_total,
-        "percentage": percentage,
-        "level": level,
-        "confidence": confidence,
-        "confidenceReasons": confidence_reasons,
-        "calibration": calibration,
-        "semanticReview": semantic_review,
-        "componentFloorViolations": floor_violations,
-        "components": components,
-        "blockers": blockers,
-        "warnings": warnings,
-        "limitations": [
-            "Scorecard does not prove product correctness, architecture suitability, security/privacy acceptance, or AI eval quality.",
-            "High scores must not override blockers, low confidence, missing calibration, missing semantic review, or failed quality gates.",
-            "Reference scores and component floors are triage signals, not release gates by themselves.",
-            "Treat score changes as signals for review and improvement, not as a target to game.",
-        ],
-    }
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--profile", choices=["smoke", "standard", "full"], default="standard")
-    parser.add_argument("--write-report", action="store_true")
-    parser.add_argument("--called-from-quality-gate", action="store_true")
-    parser.add_argument("--enforce-blockers", action="store_true", help="Return non-zero only for hard blockers, not for low evidence score.")
-    args = parser.parse_args()
-    root = project_root()
-    report = calculate(root, args.profile, args.called_from_quality_gate)
-    rules = profile_rules(args.profile)
-    report["referenceRules"] = rules
-    if args.write_report:
-        out_dir = root / ".workbench-validation"
-        out_dir.mkdir(parents=True, exist_ok=True)
-        (out_dir / "scorecard-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({
-        "decision": report["decision"],
-        "score": report["totalScore"],
-        "maxScore": report["maxScore"],
-        "percentage": report["percentage"],
-        "level": report["level"],
-        "confidence": report["confidence"],
-        "blockers": len(report["blockers"]),
-        "warnings": len(report["warnings"]),
-        "componentFloorViolations": len(report["componentFloorViolations"]),
-        "calibrationStatus": report["calibration"]["status"],
-    }, ensure_ascii=False))
-    if args.enforce_blockers and len(report["blockers"]) > rules["max_blockers"]:
-        print("[scorecard] blockers exist", file=sys.stderr)
-        return 1
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''
-    return script.replace("__FEATURE_PACKAGE_FILES__", feature_files_json).replace("__REQUIRED_ADAPTER_FILES__", required_adapter_files_json)
+    return generated_scripts.generate_scorecard_py(FEATURE_PACKAGE_FILES, REQUIRED_ADAPTER_FILES)
 
 
 def generate_py_wrapper(script_name: str) -> str:
-    return f'''param(
-  [Parameter(ValueFromRemainingArguments = $true)]
-  [string[]]$Args
-)
+    from workbench_lib import generated_scripts
 
-$ErrorActionPreference = "Stop"
-$script = Join-Path $PSScriptRoot "{script_name}"
-
-$python = Get-Command py -ErrorAction SilentlyContinue
-if ($python) {{
-  & $python.Source $script @Args
-  exit $LASTEXITCODE
-}}
-
-$python = Get-Command python -ErrorAction SilentlyContinue
-if ($python) {{
-  & $python.Source $script @Args
-  exit $LASTEXITCODE
-}}
-
-$python = Get-Command python3 -ErrorAction SilentlyContinue
-if ($python) {{
-  & $python.Source $script @Args
-  exit $LASTEXITCODE
-}}
-
-throw "Python was not found. Install Python 3 and retry."
-'''
+    return generated_scripts.generate_py_wrapper(script_name)
 
 
 def generate_sh_wrapper(script_name: str) -> str:
-    return f'''#!/usr/bin/env sh
-set -eu
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-if command -v python3 >/dev/null 2>&1; then
-  exec python3 "$SCRIPT_DIR/{script_name}" "$@"
-fi
-if command -v python >/dev/null 2>&1; then
-  exec python "$SCRIPT_DIR/{script_name}" "$@"
-fi
-echo "Python 3 was not found. Install Python 3 and retry." >&2
-exit 127
-'''
+    from workbench_lib import generated_scripts
+
+    return generated_scripts.generate_sh_wrapper(script_name)
 
 
 def generate_runtime_gate_py() -> str:
-    version_json = json.dumps(WORKBENCH_VERSION)
-    return f'''#!/usr/bin/env python3
-from __future__ import annotations
+    from workbench_lib import generated_scripts
 
-import argparse
-import hashlib
-import json
-import subprocess
-from datetime import datetime, timezone
-from pathlib import Path
-import urllib.request
-
-WORKBENCH_VERSION = {version_json}
-WORKFLOW_STAGES = ["CLASSIFY", "BASELINE_CHECK", "CHANGE", "IMPACT", "ROUTE", "PLAN", "IMPLEMENT", "VERIFY", "REVIEW", "GATE", "LEARN", "DONE", "BLOCKED"]
-WORKFLOW_PROFILES = ["light", "standard", "strict", "unclassified"]
-
-
-def project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
-
-def command_output(root: Path, command: list[str]) -> str:
-    try:
-        result = subprocess.run(command, cwd=str(root), text=True, capture_output=True, timeout=20)
-    except Exception:
-        return ""
-    if result.returncode != 0:
-        return ""
-    return result.stdout.strip()
-
-
-def git_head(root: Path) -> str:
-    return command_output(root, ["git", "rev-parse", "HEAD"]) or "unavailable"
-
-
-def diff_hash(root: Path) -> str:
-    try:
-        result = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=str(root), capture_output=True, timeout=30)
-        payload = result.stdout if result.returncode == 0 else b""
-    except Exception:
-        payload = b""
-    return "sha256:" + hashlib.sha256(payload).hexdigest()
-
-
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    digest.update(path.read_bytes())
-    return "sha256:" + digest.hexdigest()
-
-
-def read_json(path: Path) -> dict:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {{}}
-
-
-def generate_workflow_state(root: Path, stage: str, profile: str, active_feature: str | None) -> dict:
-    source_hashes = {{}}
-    for rel in [
-        "PROJECT_INTAKE.md",
-        "PROJECT_STATE.md",
-        "workbench/delivery/TRACEABILITY.md",
-        "workbench/delivery/CHANGE_LOG.md",
-    ]:
-        path = root / rel
-        if path.exists():
-            source_hashes[rel] = file_sha256(path)
-    return {{
-        "schema": "codex-workbench-workflow-state/v2",
-        "workbench_version": WORKBENCH_VERSION,
-        "generated_by": "runtime_gate.py",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "project_root": str(root),
-        "git_head": git_head(root),
-        "diff_hash": diff_hash(root),
-        "active_feature": active_feature,
-        "current_stage": stage,
-        "workflow_profile": profile,
-        "implementation_allowed": stage == "IMPLEMENT",
-        "delivery_allowed": stage == "DONE",
-        "source_hashes": source_hashes,
-        "last_gate_status": "unknown",
-        "branch_protection": "unverified",
-        "unverified_paths": ["branch_protection"],
-    }}
-
-
-def check_url(url: str, name: str) -> None:
-    with urllib.request.urlopen(url, timeout=10) as response:
-        status = getattr(response, "status", 200)
-        if status >= 400:
-            raise SystemExit(f"[runtime] {{name}} returned HTTP {{status}}: {{url}}")
-        print(f"[runtime] {{name}} ok: HTTP {{status}} {{url}}")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--apply", action="store_true", help="Run checks. Without this flag, print the plan only.")
-    parser.add_argument("--frontend-url", default="")
-    parser.add_argument("--backend-health-url", default="")
-    parser.add_argument("--stage", choices=WORKFLOW_STAGES, default="CLASSIFY")
-    parser.add_argument("--profile", choices=WORKFLOW_PROFILES, default="unclassified")
-    parser.add_argument("--active-feature", default="")
-    parser.add_argument("--write-state", action="store_true", help="Write .workbench-validation/workflow-state.json.")
-    args = parser.parse_args()
-
-    root = project_root()
-    print("[runtime] dry-run by default. Pass --apply to run URL smoke checks.")
-    if args.write_state:
-        state = generate_workflow_state(root, args.stage, args.profile, args.active_feature or None)
-        report_dir = root / ".workbench-validation"
-        report_dir.mkdir(parents=True, exist_ok=True)
-        target = report_dir / "workflow-state.json"
-        target.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
-        print(f"[runtime] wrote {{target}}")
-    if not args.apply:
-        if args.frontend_url:
-            print(f"[runtime] planned frontend check: {{args.frontend_url}}")
-        if args.backend_health_url:
-            print(f"[runtime] planned backend health check: {{args.backend_health_url}}")
-        if not args.frontend_url and not args.backend_health_url:
-            print("[runtime] no URLs configured. Provide --frontend-url or --backend-health-url.")
-        return 0
-
-    if args.frontend_url:
-        check_url(args.frontend_url, "frontend")
-    if args.backend_health_url:
-        check_url(args.backend_health_url, "backend")
-    if not args.frontend_url and not args.backend_health_url:
-        raise SystemExit("[runtime] no URL checks were provided.")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''
+    return generated_scripts.generate_runtime_gate_py(WORKBENCH_VERSION)
 
 
 def generate_api_smoke_py() -> str:
-    return '''#!/usr/bin/env python3
-from __future__ import annotations
+    from workbench_lib import generated_scripts
 
-import argparse
-import urllib.request
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--url", required=True, help="Health or smoke URL to request.")
-    args = parser.parse_args()
-    with urllib.request.urlopen(args.url, timeout=10) as response:
-        status = getattr(response, "status", 200)
-        if status >= 400:
-            raise SystemExit(f"[smoke] HTTP {status}: {args.url}")
-        print(f"[smoke] ok: HTTP {status} {args.url}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-'''
+    return generated_scripts.generate_api_smoke_py()
 
 
 def generate_review_prompt(project_name: str) -> str:
@@ -2373,7 +1233,7 @@ def generate_review_prompt(project_name: str) -> str:
 - 行为是否满足 `PROJECT_INTAKE.md`、PRD、功能 `SPEC.md` 和验收标准。
 - 权限、数据所有权、租户/组织/用户/课程/文件等边界是否被破坏。
 - API、数据库、前后端契约和外部服务调用是否兼容。
-- 测试和质量门是否足以证明改动正确。
+- 测试和质量门是否足以支持本次验收结论；语义正确性仍需结合需求、人工/独立审查和实际验收。
 - `scorecard` 是否只被当作证据审计，而不是被误用成质量裁判。
 - 是否存在 AI 生成代码常见问题：虚构 API、绕过既有封装、缺少错误处理、只改实现不改验证。
 - 是否出现重复失败、审查漏报或质量门缺口，应该沉淀到模板、测试、CI、hook、质量门或 review 规则。
@@ -3297,6 +2157,9 @@ def audit_adapter(project: Path) -> dict[str, Any]:
         findings.append(issue("P1", "scorecard-report-not-generated", "Quality gate does not call workbench/scorecard/scorecard.py, so evidence reporting can be skipped.", "workbench/quality/quality_gate.py"))
     elif quality_gate.exists() and "--called-from-quality-gate" not in quality_gate_text:
         findings.append(issue("P2", "scorecard-missing-gate-context", "Quality gate calls scorecard.py without --called-from-quality-gate, so current-run quality-gate evidence may be interpreted as missing history.", "workbench/quality/quality_gate.py"))
+    for required in ("controlled_changed_paths", "has_valid_light_change_record", "quality_profile", "scorecard_decision", "passed_with_risk", "require_verify_evidence", "require_review_evidence", "require_traceability_evidence"):
+        if quality_gate.exists() and required not in quality_gate_text:
+            findings.append(issue("P1", "weak-quality-gate-contract", f"Quality gate is missing current hard-gate contract term: {required}", "workbench/quality/quality_gate.py"))
     if commands == []:
         findings.append(issue("P1", "empty-quality-gate", "Quality gate has zero configured checks. This is not a hard gate for a code project.", "workbench/quality/quality_gate.py"))
     elif isinstance(commands, list):
@@ -3475,6 +2338,181 @@ def mark_feature_on_hold(root: Path, slug: str) -> None:
     status_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def run_command_capture(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, cwd=str(cwd), text=True, capture_output=True)
+
+
+def find_powershell_command() -> list[str] | None:
+    for executable in ("pwsh", "powershell", "powershell.exe"):
+        resolved = shutil.which(executable)
+        if not resolved:
+            continue
+        if executable == "pwsh":
+            return [resolved, "-NoProfile", "-File"]
+        return [resolved, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"]
+    return None
+
+
+def find_plugin_root_for_hook_golden() -> Path | None:
+    current = Path(__file__).resolve()
+    for ancestor in current.parents:
+        if (ancestor / "hooks" / "workbench-hard-gate.ps1").exists():
+            return ancestor
+    plugin = default_plugin_root()
+    if plugin and (plugin / "hooks" / "workbench-hard-gate.ps1").exists():
+        return plugin
+    home_nested = Path.home() / "plugins" / "codex-workbench" / "plugins" / "codex-workbench"
+    if (home_nested / "hooks" / "workbench-hard-gate.ps1").exists():
+        return home_nested
+    return None
+
+
+def invoke_workbench_hook(plugin_root: Path, plugin_data: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    powershell = find_powershell_command()
+    if not powershell:
+        return {
+            "returncode": 127,
+            "stdout": "",
+            "stderr": "PowerShell executable was not found",
+            "json": {},
+        }
+    hook_script = plugin_root / "hooks" / "workbench-hard-gate.ps1"
+    env = os.environ.copy()
+    env["PLUGIN_ROOT"] = str(plugin_root)
+    env["PLUGIN_DATA"] = str(plugin_data)
+    result = subprocess.run(
+        powershell + [str(hook_script)],
+        input=json.dumps(payload, ensure_ascii=True).encode("utf-8"),
+        cwd=str(plugin_root),
+        capture_output=True,
+        env=env,
+    )
+    stdout = result.stdout.decode("utf-8-sig", errors="replace").strip()
+    stderr = result.stderr.decode("utf-8-sig", errors="replace").strip()
+    try:
+        parsed = json.loads(stdout) if stdout else {}
+    except Exception:
+        parsed = {}
+    return {
+        "returncode": result.returncode,
+        "stdout": stdout,
+        "stderr": stderr,
+        "json": parsed,
+    }
+
+
+def hook_pretooluse_permission_decision(result: dict[str, Any]) -> str:
+    parsed = result.get("json")
+    if not isinstance(parsed, dict):
+        return ""
+    output = parsed.get("hookSpecificOutput")
+    if not isinstance(output, dict):
+        return ""
+    return str(output.get("permissionDecision") or "")
+
+
+def run_generated_adapter_smoke(
+    root: Path,
+    label: str,
+    failures: list[str],
+    wrapper_expectations: tuple[tuple[str, str], ...] | None = None,
+) -> dict[str, int | str]:
+    results: dict[str, int | str] = {}
+
+    def assert_wrapper(rel: str, script_name: str) -> None:
+        path = root / rel
+        if not path.exists():
+            failures.append(f"{label}: generated wrapper is missing: {rel}")
+            return
+        text = path.read_text(encoding="utf-8")
+        assert_condition(script_name in text, f"{label}: {rel} does not delegate to {script_name}", failures)
+
+    def run(label_suffix: str, command: list[str]) -> None:
+        result = run_command_capture(command, root)
+        results[label_suffix] = result.returncode
+        assert_condition(
+            result.returncode == 0,
+            f"{label}: generated script smoke failed for {label_suffix}: {result.stderr or result.stdout}",
+            failures,
+        )
+
+    run("runtime_gate.py --write-state", [sys.executable, "workbench/runtime/runtime_gate.py", "--write-state"])
+    assert_condition((root / ".workbench-validation" / "runtime-state.json").exists(), f"{label}: runtime_gate.py did not write runtime-state.json", failures)
+    run("api_smoke.py --help", [sys.executable, "workbench/runtime/api_smoke.py", "--help"])
+    run("quality_gate.py --help", [sys.executable, "workbench/quality/quality_gate.py", "--help"])
+    run("scorecard.py --help", [sys.executable, "workbench/scorecard/scorecard.py", "--help"])
+    expectations = wrapper_expectations or (
+        ("workbench/runtime/runtime-gate.ps1", "runtime_gate.py"),
+        ("workbench/runtime/api-smoke.ps1", "api_smoke.py"),
+        ("workbench/quality/quality-gate.ps1", "quality_gate.py"),
+        ("workbench/scorecard/scorecard.ps1", "scorecard.py"),
+        ("workbench/runtime/runtime-gate.sh", "runtime_gate.py"),
+        ("workbench/runtime/api-smoke.sh", "api_smoke.py"),
+        ("workbench/quality/quality-gate.sh", "quality_gate.py"),
+        ("workbench/scorecard/scorecard.sh", "scorecard.py"),
+    )
+    for rel, script_name in expectations:
+        assert_wrapper(rel, script_name)
+
+    powershell = find_powershell_command()
+    if powershell:
+        run("runtime-gate.ps1 --write-state", powershell + ["workbench/runtime/runtime-gate.ps1", "--write-state"])
+        run("api-smoke.ps1 --help", powershell + ["workbench/runtime/api-smoke.ps1", "--help"])
+        run("quality-gate.ps1 --help", powershell + ["workbench/quality/quality-gate.ps1", "--help"])
+        run("scorecard.ps1 --help", powershell + ["workbench/scorecard/scorecard.ps1", "--help"])
+    else:
+        results["powershell_wrappers"] = "skipped"
+
+    sh = shutil.which("sh")
+    if sh:
+        run("runtime-gate.sh --write-state", [sh, "workbench/runtime/runtime-gate.sh", "--write-state"])
+        run("api-smoke.sh --help", [sh, "workbench/runtime/api-smoke.sh", "--help"])
+        run("quality-gate.sh --help", [sh, "workbench/quality/quality-gate.sh", "--help"])
+        run("scorecard.sh --help", [sh, "workbench/scorecard/scorecard.sh", "--help"])
+    else:
+        results["sh_wrappers"] = "skipped"
+
+    return results
+
+
+def setup_local_git(root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=str(root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    subprocess.run(["git", "config", "user.email", "audit@example.local"], cwd=str(root), check=True)
+    subprocess.run(["git", "config", "user.name", "Workbench Audit"], cwd=str(root), check=True)
+
+
+def commit_all(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=str(root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=str(root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+
+
+def fixture_command_output(root: Path, command: list[str]) -> str:
+    try:
+        result = subprocess.run(command, cwd=str(root), text=True, capture_output=True, timeout=20)
+    except Exception:
+        return ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout.rstrip("\r\n")
+
+
+def fixture_git_head(root: Path) -> str:
+    return fixture_command_output(root, ["git", "rev-parse", "HEAD"]) or "unavailable"
+
+
+def fixture_diff_hash(root: Path) -> str:
+    try:
+        result = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=str(root), capture_output=True, timeout=30)
+        payload = result.stdout if result.returncode == 0 else b""
+    except Exception:
+        payload = b""
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def fixture_text_sha256(text: str) -> str:
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def assert_condition(condition: bool, message: str, failures: list[str]) -> None:
     if not condition:
         failures.append(message)
@@ -3545,6 +2583,7 @@ def run_golden_case(name: str, builder: Any) -> dict[str, Any]:
             f"{name}: dry-run upgrade after generation should not plan writes without refresh flags",
             failures,
         )
+        script_smoke = run_generated_adapter_smoke(root, name, failures)
         return {
             "name": name,
             "passed": not failures,
@@ -3553,6 +2592,7 @@ def run_golden_case(name: str, builder: Any) -> dict[str, Any]:
             "generatedFileCount": len(generation["files"]),
             "featureFileCount": len(feature["files"]),
             "auditSummary": audit_after_hold["summary"],
+            "scriptSmoke": script_smoke,
         }
 
 
@@ -3577,6 +2617,12 @@ def run_upgrade_golden_case() -> dict[str, Any]:
         assert_condition(preview["files"]["workbench/scorecard/CALIBRATION.md"]["action"] == "write-missing", "upgrade should add missing scorecard CALIBRATION.md", failures)
         assert_condition(preview["files"]["workbench/scorecard/scorecard.py"]["action"] == "write-missing", "upgrade should add missing scorecard.py", failures)
         assert_condition(preview["files"]["workbench/quality/quality_gate.py"]["action"] == "write-missing", "upgrade should add missing Python quality gate", failures)
+        assert_condition(preview["files"]["workbench/runtime/runtime_gate.py"]["action"] == "write-missing", "upgrade should add missing runtime_gate.py", failures)
+        assert_condition(preview["files"]["workbench/runtime/api_smoke.py"]["action"] == "write-missing", "upgrade should add missing api_smoke.py", failures)
+        assert_condition(preview["files"]["workbench/runtime/runtime-gate.ps1"]["action"] == "write-missing", "upgrade should add missing runtime-gate.ps1", failures)
+        assert_condition(preview["files"]["workbench/runtime/api-smoke.ps1"]["action"] == "write-missing", "upgrade should add missing api-smoke.ps1", failures)
+        assert_condition(preview["files"]["workbench/runtime/runtime-gate.sh"]["action"] == "write-missing", "upgrade should add missing runtime-gate.sh", failures)
+        assert_condition(preview["files"]["workbench/runtime/api-smoke.sh"]["action"] == "write-missing", "upgrade should add missing api-smoke.sh", failures)
         applied = upgrade_adapter(root, "old-workbench", dry_run=False, replace_docs=False, refresh_generated=False)
         validation = validate_adapter(root)
         audit = audit_adapter(root)
@@ -3601,8 +2647,24 @@ def run_upgrade_golden_case() -> dict[str, Any]:
         assert_condition((root / "workbench" / "feature-template" / "DECISIONS.md").exists(), "upgrade did not write feature decisions template", failures)
         assert_condition((root / "workbench" / "feature-template" / "FEATURE_STATUS.schema.json").exists(), "upgrade did not write feature status schema", failures)
         assert_condition((root / "workbench" / "quality" / "quality_gate.py").exists(), "upgrade did not write missing quality_gate.py", failures)
+        assert_condition((root / "workbench" / "runtime" / "runtime_gate.py").exists(), "upgrade did not write runtime_gate.py", failures)
+        assert_condition((root / "workbench" / "runtime" / "api_smoke.py").exists(), "upgrade did not write api_smoke.py", failures)
+        assert_condition((root / "workbench" / "runtime" / "runtime-gate.ps1").exists(), "upgrade did not write runtime-gate.ps1", failures)
+        assert_condition((root / "workbench" / "runtime" / "api-smoke.ps1").exists(), "upgrade did not write api-smoke.ps1", failures)
+        assert_condition((root / "workbench" / "runtime" / "runtime-gate.sh").exists(), "upgrade did not write runtime-gate.sh", failures)
+        assert_condition((root / "workbench" / "runtime" / "api-smoke.sh").exists(), "upgrade did not write api-smoke.sh", failures)
         assert_condition(validation["passed"], "upgrade validation failed", failures)
         assert_condition(audit["summary"]["P0"] == 0, "upgrade audit has P0 findings", failures)
+        upgrade_wrapper_expectations = (
+            ("workbench/runtime/runtime-gate.ps1", "runtime_gate.py"),
+            ("workbench/runtime/api-smoke.ps1", "api_smoke.py"),
+            ("workbench/scorecard/scorecard.ps1", "scorecard.py"),
+            ("workbench/runtime/runtime-gate.sh", "runtime_gate.py"),
+            ("workbench/runtime/api-smoke.sh", "api_smoke.py"),
+            ("workbench/quality/quality-gate.sh", "quality_gate.py"),
+            ("workbench/scorecard/scorecard.sh", "scorecard.py"),
+        )
+        script_smoke = run_generated_adapter_smoke(root, "old-workbench-upgrade", failures, upgrade_wrapper_expectations)
         return {
             "name": "old-workbench-upgrade",
             "passed": not failures,
@@ -3610,6 +2672,7 @@ def run_upgrade_golden_case() -> dict[str, Any]:
             "previewActions": preview["files"],
             "appliedFileCount": len(applied["files"]),
             "auditSummary": audit["summary"],
+            "scriptSmoke": script_smoke,
         }
 
 
@@ -3649,6 +2712,671 @@ def run_workbench_guard_golden_case() -> dict[str, Any]:
         }
 
 
+def confirm_project_intake_for_fixture(root: Path) -> None:
+    intake = root / "PROJECT_INTAKE.md"
+    text = intake.read_text(encoding="utf-8")
+    text = re.sub(r"(?m)^status:\s*draft\s*$", "status: confirmed", text)
+    text = re.sub(r"(?m)^(\| P\d+ \|[^|\n]+\|[^|\n]+\|)\s*\| open \|$", r"\1 answered | closed |", text)
+    intake.write_text(text, encoding="utf-8")
+    flow = root / "DEVELOPMENT_FLOW.md"
+    flow_text = flow.read_text(encoding="utf-8")
+    flow_text = re.sub(r"(?m)^status:\s*draft\s*$", "status: confirmed", flow_text)
+    flow.write_text(flow_text, encoding="utf-8")
+
+
+def replace_frontmatter_field(text: str, field: str, value: str) -> str:
+    pattern = rf"(?m)^({re.escape(field)}\s*:\s*).*$"
+    replacement = rf"\g<1>{value}"
+    if re.search(pattern, text):
+        return re.sub(pattern, replacement, text, count=1)
+    return f"{field}: {value}\n" + text
+
+
+def write_frontmatter_field(path: Path, field: str, value: str) -> None:
+    path.write_text(replace_frontmatter_field(path.read_text(encoding="utf-8"), field, value), encoding="utf-8")
+
+
+def set_feature_profile(package: Path, profile: str, traceability_required: bool = False) -> None:
+    status_path = package / "FEATURE_STATUS.json"
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    status.update(
+        {
+            "feature_status": "complete",
+            "risk_level": profile,
+            "workflow_profile": profile,
+            "current_stage": "DONE",
+            "implementation_allowed": True,
+            "delivery_allowed": True,
+            "verification_status": "passed",
+            "review_status": "passed",
+            "gate_status": "not_run",
+            "workbench_upgrade_assessment": "not_required",
+        }
+    )
+    status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    write_frontmatter_field(package / "CHANGE_REQUEST.md", "status", "ready")
+    write_frontmatter_field(package / "CHANGE_REQUEST.md", "workflow_profile", profile)
+    write_frontmatter_field(package / "IMPACT_ANALYSIS.md", "status", "ready")
+    write_frontmatter_field(package / "IMPACT_ANALYSIS.md", "baseline_update_required", "false")
+    write_frontmatter_field(package / "IMPACT_ANALYSIS.md", "traceability_update_required", "true" if traceability_required else "false")
+    if traceability_required:
+        impact = package / "IMPACT_ANALYSIS.md"
+        impact_text = impact.read_text(encoding="utf-8")
+        impact_text = re.sub(
+            r"\|\s*\|\s*\|\s*update / keep / n/a\s*\|\s*`VERIFY\.md`\s*\|",
+            "| REQ-GOLDEN-001 | `workbench/product/PRD.md` | update | `VERIFY.md` |",
+            impact_text,
+            count=1,
+        )
+        impact.write_text(impact_text, encoding="utf-8")
+
+    spec = package / "SPEC.md"
+    scores = (2, 2, 2) if profile == "strict" else (1, 1, 1)
+    spec_text = spec.read_text(encoding="utf-8")
+    for field, value in (
+        ("status", "approved"),
+        ("approved_for_plan", "true"),
+        ("risk_level", profile),
+        ("workflow_profile", profile),
+        ("impact_score", str(scores[0])),
+        ("uncertainty_score", str(scores[1])),
+        ("rollback_score", str(scores[2])),
+        ("risk_score", str(sum(scores))),
+        ("hard_triggers", "none" if profile != "strict" else "strict traceability golden test"),
+        ("classification_reason", "golden test fixture"),
+    ):
+        spec_text = replace_frontmatter_field(spec_text, field, value)
+    spec.write_text(spec_text, encoding="utf-8")
+
+    for filename in ("DESIGN.md",):
+        write_frontmatter_field(package / filename, "status", "approved")
+        write_frontmatter_field(package / filename, "approved_for_plan", "true")
+    plan = package / "PLAN.md"
+    plan_text = plan.read_text(encoding="utf-8")
+    for field, value in (
+        ("status", "approved"),
+        ("approved_for_tasks", "true"),
+        ("approved_for_implementation", "true"),
+    ):
+        plan_text = replace_frontmatter_field(plan_text, field, value)
+    plan.write_text(plan_text, encoding="utf-8")
+
+    tasks = package / "TASKS.md"
+    tasks_text = tasks.read_text(encoding="utf-8")
+    tasks_text = replace_frontmatter_field(tasks_text, "status", "ready")
+    tasks_text = replace_frontmatter_field(tasks_text, "ready_for_implementation", "true")
+    tasks_text = tasks_text.replace("- [ ]", "- [x]")
+    tasks.write_text(tasks_text, encoding="utf-8")
+
+
+def write_verify_fixture(package: Path, with_evidence: bool) -> None:
+    verify = package / "VERIFY.md"
+    text = verify.read_text(encoding="utf-8")
+    text = replace_frontmatter_field(text, "status", "passed")
+    text = replace_frontmatter_field(text, "verified_by", "golden-test")
+    text = replace_frontmatter_field(text, "verified_at", "2026-06-19T00:00:00Z")
+    if with_evidence:
+        evidence_path = package.parents[2] / ".workbench-validation" / "golden-verify-evidence.log"
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text("golden verification evidence\n", encoding="utf-8")
+        text = re.sub(
+            r"\|\s*\|\s*\|\s*\|\s*\|",
+            "| py -B workbench/quality/quality_gate.py --profile standard | passed | .workbench-validation/golden-verify-evidence.log | golden fixture |",
+            text,
+            count=1,
+        )
+        text = re.sub(
+            r"\| 主成功路径 \|\s*\|\s*\|\s*\|\s*\|",
+            "| 主成功路径 | run quality gate | evidence log is written | 通过 | .workbench-validation/golden-verify-evidence.log |",
+            text,
+            count=1,
+        )
+        text = text.replace("- [ ] 可以交付。", "- [x] 可以交付。")
+    verify.write_text(text, encoding="utf-8")
+
+
+def write_verify_accepted_risk_fixture(package: Path, complete: bool) -> None:
+    verify = package / "VERIFY.md"
+    text = verify.read_text(encoding="utf-8")
+    if complete:
+        replacement = "| external branch protection | local env cannot verify remote branch rule | merge could bypass local gate | true | user-confirmed-golden | CI required check + independent review | track branch protection setup before release |"
+    else:
+        replacement = "| external branch protection | local env cannot verify remote branch rule | merge could bypass local gate | true |  |  |  |"
+    if re.search(r"\|\s*\|\s*\|\s*\|\s*false\s*\|\s*\|\s*\|\s*\|", text):
+        text = re.sub(r"\|\s*\|\s*\|\s*\|\s*false\s*\|\s*\|\s*\|\s*\|", replacement, text, count=1)
+    elif re.search(r"(?m)^\|\s*external branch protection\s*\|.*\|\s*$", text):
+        text = re.sub(r"(?m)^\|\s*external branch protection\s*\|.*\|\s*$", replacement, text)
+    else:
+        text = text + "\n" + replacement + "\n"
+    verify.write_text(text, encoding="utf-8")
+
+
+def write_review_fixture(package: Path, clean: bool) -> None:
+    review = package / "REVIEW.md"
+    text = review.read_text(encoding="utf-8")
+    text = replace_frontmatter_field(text, "status", "passed")
+    text = replace_frontmatter_field(text, "reviewed_by", "golden-test")
+    text = replace_frontmatter_field(text, "reviewed_at", "2026-06-19T00:00:00Z")
+    text = replace_frontmatter_field(text, "workbench_upgrade_assessment", "not_required")
+    if clean:
+        text = text.replace("- [ ] 未发现 P0/P1。", "- [x] 未发现 P0/P1。")
+        text = text.replace("- [x] 存在 P0/P1，不能交付。", "- [ ] 存在 P0/P1，不能交付。")
+        text = re.sub(
+            r"(## P0/P1 检查\s*\n)(.*?)(\n## 产品下限检查)",
+            lambda match: match.group(1) + match.group(2).replace("- [ ]", "- [x]") + match.group(3),
+            text,
+            flags=re.S,
+        )
+        text = re.sub(
+            r"```text\s*P1 path/to/file\.ext:123 - 问题标题.*?```",
+            "无未解决 P0/P1。",
+            text,
+            flags=re.S,
+        )
+        text = re.sub(r"(?m)^P1 path/to/file\.ext:123 - unresolved golden blocker\s*$", "", text)
+    else:
+        text = text.replace("- [ ] 存在 P0/P1，不能交付。", "- [x] 存在 P0/P1，不能交付。")
+        text += "\nP1 path/to/file.ext:123 - unresolved golden blocker\n"
+    review.write_text(text, encoding="utf-8")
+
+
+def mark_traceability_covered(root: Path) -> None:
+    path = root / "workbench" / "delivery" / "TRACEABILITY.md"
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(
+        r"(?m)^\|\s*REQ-001\s*\|[^\n]*$",
+        "| REQ-GOLDEN-001 | requirement | `workbench/product/PRD.md` | golden fixture | src/app.js | workbench/features/evidence-gate/VERIFY.md | covered | golden fixture evidence |",
+        text,
+        count=1,
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def run_quality_gate_contract_golden_case() -> dict[str, Any]:
+    failures: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="codex-workbench-golden-quality-gate-") as tmp:
+        root = Path(tmp)
+        setup_local_git(root)
+        (root / "src").mkdir()
+        (root / "src" / "app.js").write_text("console.log('v1')\n", encoding="utf-8")
+        commit_all(root, "initial app")
+        generate_adapter(root, "quality-gate-contract", force=False, dry_run=False)
+        commands = [
+            {
+                "name": "python noop",
+                "group": "python",
+                "profiles": ["smoke", "standard", "full"],
+                "cwd": ".",
+                "command": [sys.executable, "-c", "print('quality-ok')"],
+            }
+        ]
+        (root / "workbench" / "quality" / "quality_gate.py").write_text(generate_quality_gate_py(commands), encoding="utf-8")
+        confirm_project_intake_for_fixture(root)
+        commit_all(root, "workbench baseline")
+
+        (root / "src" / "app.js").write_text("console.log('v2')\n", encoding="utf-8")
+        missing_record = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(missing_record.returncode != 0, "quality gate should fail controlled code diff without feature package or light record", failures)
+        assert_condition("controlled changes require" in (missing_record.stdout + missing_record.stderr), "quality gate failure should mention missing feature/light evidence", failures)
+
+        change_log = root / "workbench" / "delivery" / "CHANGE_LOG.md"
+        change_log.write_text(change_log.read_text(encoding="utf-8") + """
+
+```json
+{
+  "change_id": "CHG-GOLDEN-PSEUDO",
+  "workflow_profile": "light",
+  "scope": ["*"],
+  "risk": "light",
+  "validation": "python noop",
+  "evidence": "golden quality gate fixture",
+  "reviewer": "golden-test",
+  "gate_marker": ".workbench-validation/quality-gate-ok.json",
+  "status": "verified"
+}
+```
+""", encoding="utf-8")
+        pseudo_light = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(pseudo_light.returncode != 0, "quality gate should reject wildcard light CHANGE_LOG scope", failures)
+
+        change_log.write_text(change_log.read_text(encoding="utf-8") + """
+
+```json
+{
+  "change_id": "CHG-GOLDEN-001",
+  "workflow_profile": "light",
+  "scope": ["src/app.js", "workbench/delivery/CHANGE_LOG.md"],
+  "risk": "light",
+  "validation": "python noop",
+  "evidence": "golden quality gate fixture",
+  "reviewer": "golden-test",
+  "gate_marker": ".workbench-validation/quality-gate-ok.json",
+  "status": "verified"
+}
+```
+""", encoding="utf-8")
+        with_light = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(with_light.returncode == 0, f"quality gate should pass with valid light CHANGE_LOG record: {with_light.stderr}", failures)
+        marker = read_json(root / ".workbench-validation" / "quality-gate-ok.json") or {}
+        state = read_json(root / ".workbench-validation" / "quality-workflow-state.json") or {}
+        assert_condition(marker.get("status") in {"passed", "passed_with_risk"}, "quality marker should record pass or pass-with-risk status", failures)
+        assert_condition(marker.get("quality_profile") == "standard", "quality marker should use quality_profile=standard", failures)
+        assert_condition(marker.get("workflow_profile") == "light", "quality marker should infer workflow_profile=light", failures)
+        assert_condition("scorecard_decision" in marker, "quality marker should include scorecard_decision", failures)
+        assert_condition("unverified_paths" in marker and "branch_protection" in marker.get("unverified_paths", []), "quality marker should record unverified branch protection", failures)
+        assert_condition(state.get("workflow_profile") == "light", "workflow state should keep workflow_profile separate from quality profile", failures)
+        assert_condition(state.get("quality_profile") == "standard", "workflow state should include quality_profile", failures)
+
+        api_design = root / "workbench" / "architecture" / "API_DESIGN.md"
+        api_design_original = api_design.read_bytes()
+        change_log_before_forbidden = change_log.read_text(encoding="utf-8")
+        api_design.write_bytes(api_design_original + b"\n\n## Golden forbidden light path change\n")
+        change_log.write_text(change_log.read_text(encoding="utf-8") + """
+
+```json
+{
+  "change_id": "CHG-GOLDEN-FORBIDDEN-LIGHT",
+  "workflow_profile": "light",
+  "scope": ["src/app.js", "workbench/delivery/CHANGE_LOG.md", "workbench/architecture/API_DESIGN.md"],
+  "risk": "light",
+  "validation": "python noop",
+  "evidence": "golden quality gate fixture",
+  "reviewer": "golden-test",
+  "gate_marker": ".workbench-validation/quality-gate-ok.json",
+  "status": "verified"
+}
+```
+""", encoding="utf-8")
+        forbidden_light = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(forbidden_light.returncode != 0, "quality gate should reject light CHANGE_LOG for high-risk architecture/API paths", failures)
+        api_design.write_bytes(api_design_original)
+        change_log.write_text(change_log_before_forbidden, encoding="utf-8")
+
+        smoke = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "smoke"], root)
+        assert_condition(smoke.returncode == 0, f"smoke quality gate should pass with valid light record: {smoke.stderr}", failures)
+        smoke_state = read_json(root / ".workbench-validation" / "quality-workflow-state-smoke.json") or {}
+        smoke_marker = read_json(root / ".workbench-validation" / "quality-gate-smoke-ok.json") or {}
+        assert_condition(smoke_state.get("workflow_profile") in {"light", "standard", "strict", "unclassified"}, "smoke run must not write quality profile into workflow_profile", failures)
+        assert_condition(smoke_state.get("quality_profile") == "smoke", "smoke run should write quality_profile=smoke", failures)
+        assert_condition(smoke_marker.get("quality_profile") == "smoke", "smoke run should write a separate smoke marker", failures)
+        marker_after_smoke = read_json(root / ".workbench-validation" / "quality-gate-ok.json") or {}
+        assert_condition(marker_after_smoke.get("quality_profile") == "standard", "smoke run must not overwrite the standard quality-gate-ok marker", failures)
+
+        return {
+            "name": "quality-gate-contract",
+            "passed": not failures,
+            "failures": failures,
+            "missingRecordExit": missing_record.returncode,
+            "pseudoLightExit": pseudo_light.returncode,
+            "forbiddenLightExit": forbidden_light.returncode,
+            "withLightExit": with_light.returncode,
+            "markerStatus": marker.get("status"),
+            "workflowProfile": marker.get("workflow_profile"),
+            "qualityProfile": marker.get("quality_profile"),
+        }
+
+
+def run_quality_evidence_golden_case() -> dict[str, Any]:
+    failures: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="codex-workbench-golden-evidence-") as tmp:
+        root = Path(tmp)
+        setup_local_git(root)
+        write_sample_node(root)
+        generate_adapter(root, "evidence-gate", force=False, dry_run=False)
+        commands = [
+            {
+                "name": "python noop",
+                "group": "python",
+                "profiles": ["smoke", "standard", "full"],
+                "cwd": ".",
+                "command": [sys.executable, "-c", "print('quality-ok')"],
+            }
+        ]
+        (root / "workbench" / "quality" / "quality_gate.py").write_text(generate_quality_gate_py(commands), encoding="utf-8")
+        confirm_project_intake_for_fixture(root)
+        commit_all(root, "confirmed workbench baseline")
+        create_feature_package(root, "Evidence Gate", dry_run=False, force=False)
+        package = root / "workbench" / "features" / "evidence-gate"
+        set_feature_profile(package, "standard", traceability_required=False)
+
+        write_verify_fixture(package, with_evidence=False)
+        write_review_fixture(package, clean=True)
+        empty_verify = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(empty_verify.returncode != 0, "evidence gate should fail VERIFY.md marked passed with empty evidence", failures)
+        assert_condition("VERIFY.md is marked passed" in (empty_verify.stdout + empty_verify.stderr), "evidence gate failure should mention VERIFY evidence", failures)
+
+        write_verify_fixture(package, with_evidence=True)
+        write_review_fixture(package, clean=False)
+        unresolved_review = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(unresolved_review.returncode != 0, "evidence gate should fail REVIEW.md marked passed with unresolved P0/P1 placeholder", failures)
+        assert_condition("REVIEW.md" in (unresolved_review.stdout + unresolved_review.stderr), "evidence gate failure should mention REVIEW.md", failures)
+
+        write_review_fixture(package, clean=True)
+        standard_pass = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(standard_pass.returncode == 0, f"evidence gate should pass after VERIFY/REVIEW evidence is fixed: {standard_pass.stderr}", failures)
+
+        set_feature_profile(package, "strict", traceability_required=True)
+        strict_missing_trace = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(strict_missing_trace.returncode != 0, "strict evidence gate should fail while TRACEABILITY.md has missing rows", failures)
+        assert_condition("TRACEABILITY" in (strict_missing_trace.stdout + strict_missing_trace.stderr), "strict evidence gate failure should mention TRACEABILITY", failures)
+
+        unrelated_trace = root / "workbench" / "delivery" / "TRACEABILITY.md"
+        unrelated_trace.write_text(unrelated_trace.read_text(encoding="utf-8").replace(" | missing |  |", " | covered | unrelated legacy evidence |"), encoding="utf-8")
+        strict_unrelated_trace = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(strict_unrelated_trace.returncode != 0, "strict evidence gate should fail when TRACEABILITY has only unrelated covered IDs", failures)
+        assert_condition("impacted IDs missing" in (strict_unrelated_trace.stdout + strict_unrelated_trace.stderr), "strict traceability failure should mention impacted IDs missing", failures)
+
+        mark_traceability_covered(root)
+        write_verify_accepted_risk_fixture(package, complete=False)
+        incomplete_risk = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(incomplete_risk.returncode != 0, "strict evidence gate should fail accepted_risk=true without user confirmation, alternative verification, and follow-up", failures)
+        assert_condition("incomplete verification risk acceptance" in (incomplete_risk.stdout + incomplete_risk.stderr), "strict accepted-risk failure should mention incomplete verification risk acceptance", failures)
+
+        write_verify_accepted_risk_fixture(package, complete=True)
+        strict_pass = run_command_capture([sys.executable, "workbench/quality/quality_gate.py", "--profile", "standard"], root)
+        assert_condition(strict_pass.returncode == 0, f"strict evidence gate should pass after TRACEABILITY rows and accepted risk are complete: {strict_pass.stderr}", failures)
+        strict_marker = read_json(root / ".workbench-validation" / "quality-gate-ok.json") or {}
+        assert_condition(strict_marker.get("status") == "passed_with_risk", "strict accepted-risk marker should be passed_with_risk", failures)
+        assert_condition(strict_marker.get("accepted_risk_features"), "strict accepted-risk marker should list accepted_risk_features", failures)
+
+        return {
+            "name": "quality-evidence-contract",
+            "passed": not failures,
+            "failures": failures,
+            "emptyVerifyExit": empty_verify.returncode,
+            "unresolvedReviewExit": unresolved_review.returncode,
+            "strictMissingTraceExit": strict_missing_trace.returncode,
+            "strictUnrelatedTraceExit": strict_unrelated_trace.returncode,
+            "incompleteRiskExit": incomplete_risk.returncode,
+            "strictPassExit": strict_pass.returncode,
+            "strictMarkerStatus": strict_marker.get("status"),
+        }
+
+
+def run_plugin_hook_golden_case() -> dict[str, Any]:
+    failures: list[str] = []
+    plugin_root = find_plugin_root_for_hook_golden()
+    if plugin_root is None:
+        failures.append("hook golden: bundled plugin hook script was not found")
+        return {"name": "plugin-hook-hard-gate", "passed": False, "failures": failures}
+
+    with tempfile.TemporaryDirectory(prefix="codex-workbench-golden-hooks-") as tmp:
+        root = Path(tmp)
+        plugin_data = root / "plugin-data"
+        plugin_data.mkdir()
+
+        approval_patch = """*** Begin Patch
+*** Add File: config.toml
++approval_policy = 'never'
+*** End Patch
+"""
+        approval_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-approval-policy",
+                "tool_name": "apply_patch",
+                "cwd": str(root),
+                "tool_input": {"command": approval_patch},
+            },
+        )
+        assert_condition(approval_result["returncode"] == 0, f"hook golden: approval_policy PreToolUse exited {approval_result['returncode']}: {approval_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(approval_result) == "deny", "hook golden: apply_patch adding approval_policy='never' should be denied", failures)
+
+        workbench_docs_patch = """*** Begin Patch
+*** Add File: workbench/docs/test.md
++# Test
+*** End Patch
+"""
+        docs_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-workbench-docs",
+                "tool_name": "apply_patch",
+                "cwd": str(root),
+                "tool_input": {"command": workbench_docs_patch},
+            },
+        )
+        docs_reason = ""
+        docs_output = docs_result.get("json", {}).get("hookSpecificOutput", {}) if isinstance(docs_result.get("json"), dict) else {}
+        if isinstance(docs_output, dict):
+            docs_reason = str(docs_output.get("permissionDecisionReason") or "")
+        assert_condition(docs_result["returncode"] == 0, f"hook golden: workbench/docs PreToolUse exited {docs_result['returncode']}: {docs_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(docs_result) == "deny", "hook golden: apply_patch adding workbench/docs/test.md should be denied", failures)
+        assert_condition("workbench" in docs_reason and "docs" in docs_reason, "hook golden: workbench/docs denial should name the invalid directory", failures)
+
+        readonly_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-readonly-rg",
+                "tool_name": "functions.shell_command",
+                "cwd": str(root),
+                "tool_input": {"command": "rg TODO"},
+            },
+        )
+        assert_condition(readonly_result["returncode"] == 0, f"hook golden: readonly rg PreToolUse exited {readonly_result['returncode']}: {readonly_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(readonly_result) != "deny", "hook golden: single readonly rg command should not be denied", failures)
+
+        composite_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-composite-destructive",
+                "tool_name": "functions.shell_command",
+                "cwd": str(root),
+                "tool_input": {"command": "rg TODO; " + "Remove" + "-Item -LiteralPath '$env:USERPROFILE\\.codex' -Recurse -Force"},
+            },
+        )
+        assert_condition(composite_result["returncode"] == 0, f"hook golden: composite destructive PreToolUse exited {composite_result['returncode']}: {composite_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(composite_result) == "deny", "hook golden: readonly prefix plus destructive command should be denied", failures)
+
+        marker_write_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-direct-marker-write",
+                "tool_name": "functions.shell_command",
+                "cwd": str(root),
+                "tool_input": {"command": "Set-Content -LiteralPath '.workbench-validation\\quality-gate-ok.json' -Value '{}'"},
+            },
+        )
+        assert_condition(marker_write_result["returncode"] == 0, f"hook golden: direct marker write PreToolUse exited {marker_write_result['returncode']}: {marker_write_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(marker_write_result) == "deny", "hook golden: direct quality-gate marker writes should be denied", failures)
+
+        composite_marker_write_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-composite-marker-write",
+                "tool_name": "functions.shell_command",
+                "cwd": str(root),
+                "tool_input": {"command": ".\\workbench\\quality\\quality-gate.ps1; Set-Content -LiteralPath '.workbench-validation\\quality-gate-ok.json' -Value '{}'"},
+            },
+        )
+        assert_condition(composite_marker_write_result["returncode"] == 0, f"hook golden: composite marker write PreToolUse exited {composite_marker_write_result['returncode']}: {composite_marker_write_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(composite_marker_write_result) == "deny", "hook golden: quality gate path must not exempt direct marker writes in composite commands", failures)
+
+        validation_dir_text = ".workbench-validation"
+        gate_marker_name = "quality-" + "gate-" + "ok.json"
+        smoke_marker_name = "quality-" + "gate-" + "smoke-" + "ok.json"
+        inline_marker_write_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-inline-marker-write",
+                "tool_name": "functions.shell_command",
+                "cwd": str(root),
+                "tool_input": {
+                    "command": (
+                        "py -c \"from pathlib import Path; "
+                        f"Path({validation_dir_text!r}, {gate_marker_name!r}).write_text('{{}}'); "
+                        "print('.\\\\workbench\\\\quality\\\\quality-gate.ps1')\""
+                    )
+                },
+            },
+        )
+        assert_condition(inline_marker_write_result["returncode"] == 0, f"hook golden: inline marker write PreToolUse exited {inline_marker_write_result['returncode']}: {inline_marker_write_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(inline_marker_write_result) == "deny", "hook golden: interpreter inline marker writes should be denied even when quality gate text appears", failures)
+
+        smoke_marker_write_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": "golden-smoke-marker-write",
+                "tool_name": "functions.shell_command",
+                "cwd": str(root),
+                "tool_input": {"command": f"Set-Content -LiteralPath '{validation_dir_text}\\{smoke_marker_name}' -Value '{{}}'"},
+            },
+        )
+        assert_condition(smoke_marker_write_result["returncode"] == 0, f"hook golden: smoke marker write PreToolUse exited {smoke_marker_write_result['returncode']}: {smoke_marker_write_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(smoke_marker_write_result) == "deny", "hook golden: direct smoke marker writes should be denied", failures)
+
+        outer = root / "outer"
+        nested = outer / "packages" / "nested-app"
+        outer.mkdir(parents=True)
+        setup_local_git(outer)
+        (outer / "README.md").write_text("# Outer\n", encoding="utf-8")
+        commit_all(outer, "outer baseline")
+
+        nested.mkdir(parents=True)
+        setup_local_git(nested)
+        (nested / "src").mkdir()
+        (nested / "src" / "app.txt").write_text("v1\n", encoding="utf-8")
+        (nested / "workbench" / "quality").mkdir(parents=True)
+        (nested / "workbench" / "quality" / "quality-gate.ps1").write_text("Write-Output 'quality ok'\n", encoding="utf-8")
+        commit_all(nested, "nested baseline")
+
+        session_id = "golden-nested-stop"
+        start_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "SessionStart",
+                "session_id": session_id,
+                "cwd": str(nested),
+            },
+        )
+        assert_condition(start_result["returncode"] == 0, f"hook golden: SessionStart exited {start_result['returncode']}: {start_result['stderr']}", failures)
+        (nested / "src" / "app.txt").write_text("v2\n", encoding="utf-8")
+        stop_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "Stop",
+                "session_id": session_id,
+                "cwd": str(nested),
+                "stop_hook_active": False,
+            },
+        )
+        stop_payload = stop_result.get("json", {}) if isinstance(stop_result.get("json"), dict) else {}
+        stop_reason = str(stop_payload.get("reason") or "") if isinstance(stop_payload, dict) else ""
+        assert_condition(stop_result["returncode"] == 0, f"hook golden: Stop exited {stop_result['returncode']}: {stop_result['stderr']}", failures)
+        assert_condition(stop_payload.get("decision") == "block", "hook golden: Stop should block dirty nested repo without quality-gate marker", failures)
+        assert_condition("missing quality-gate-ok.json" in stop_reason, "hook golden: Stop block should mention missing quality-gate-ok.json", failures)
+        normalized_reason = stop_reason.replace("\\", "/").lower()
+        normalized_nested = str(nested).replace("\\", "/").lower()
+        assert_condition(normalized_nested in normalized_reason, "hook golden: Stop block should report the nested repo path", failures)
+
+        marker_dir = nested / ".workbench-validation"
+        marker_dir.mkdir(parents=True, exist_ok=True)
+        workflow_state = {
+            "schema": "codex-workbench-workflow-state/v2",
+            "generated_by": "quality_gate.py",
+            "git_head": fixture_git_head(nested),
+            "diff_hash": fixture_diff_hash(nested),
+            "workflow_profile": "light",
+            "quality_profile": "standard",
+            "last_gate_status": "passed",
+            "checks_run": ["forged check"],
+        }
+        workflow_state_text = json.dumps(workflow_state, ensure_ascii=False, indent=2) + "\n"
+        workflow_state_path = marker_dir / "quality-workflow-state.json"
+        workflow_state_path.write_text(workflow_state_text, encoding="utf-8")
+        forged_marker = {
+            "schema": "codex-workbench-quality-gate-marker/v2",
+            "status": "passed",
+            "created_at": utc_now(),
+            "projectRoot": str(nested),
+            "git_head": fixture_git_head(nested),
+            "diff_hash": fixture_diff_hash(nested),
+            "workflow_profile": "light",
+            "quality_profile": "standard",
+            "commands_run": ["forged check"],
+            "skipped_groups": [],
+            "allow_empty": False,
+            "checks_run": ["forged check"],
+            "workflow_state": str(workflow_state_path),
+            "workflow_state_hash": fixture_text_sha256(workflow_state_text),
+            "branch_protection": "unverified",
+            "unverified_paths": ["branch_protection"],
+        }
+        (marker_dir / "quality-gate-ok.json").write_text(json.dumps(forged_marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        split_marker_fake_gate_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "PreToolUse",
+                "session_id": session_id,
+                "tool_name": "functions.shell_command",
+                "cwd": str(nested),
+                "tool_input": {
+                    "command": (
+                        "py -c \"from pathlib import Path; "
+                        "d='.workbench-'+'validation'; "
+                        "m='quality-'+'gate-'+'ok.json'; "
+                        "Path(d, m).write_text('{}'); "
+                        "print('.\\\\workbench\\\\quality\\\\quality-gate.ps1 ')\""
+                    )
+                },
+            },
+        )
+        assert_condition(split_marker_fake_gate_result["returncode"] == 0, f"hook golden: split marker fake gate PreToolUse exited {split_marker_fake_gate_result['returncode']}: {split_marker_fake_gate_result['stderr']}", failures)
+        assert_condition(hook_pretooluse_permission_decision(split_marker_fake_gate_result) != "deny", "hook golden: split marker fake gate probe should not depend on PreToolUse denial", failures)
+        forged_stop_result = invoke_workbench_hook(
+            plugin_root,
+            plugin_data,
+            {
+                "hook_event_name": "Stop",
+                "session_id": session_id,
+                "cwd": str(nested),
+                "stop_hook_active": False,
+            },
+        )
+        forged_stop_payload = forged_stop_result.get("json", {}) if isinstance(forged_stop_result.get("json"), dict) else {}
+        forged_stop_reason = str(forged_stop_payload.get("reason") or "") if isinstance(forged_stop_payload, dict) else ""
+        assert_condition(forged_stop_result["returncode"] == 0, f"hook golden: forged marker Stop exited {forged_stop_result['returncode']}: {forged_stop_result['stderr']}", failures)
+        assert_condition(forged_stop_payload.get("decision") == "block", "hook golden: Stop should block a fresh-looking marker when no real quality gate ran this session", failures)
+        assert_condition("质量门调用" in forged_stop_reason or "quality" in forged_stop_reason.lower(), "hook golden: forged marker Stop block should mention missing session quality-gate invocation", failures)
+
+        return {
+            "name": "plugin-hook-hard-gate",
+            "passed": not failures,
+            "failures": failures,
+            "preToolUseApprovalDecision": hook_pretooluse_permission_decision(approval_result),
+            "preToolUseWorkbenchDocsDecision": hook_pretooluse_permission_decision(docs_result),
+            "preToolUseReadonlyDecision": hook_pretooluse_permission_decision(readonly_result),
+            "preToolUseCompositeDecision": hook_pretooluse_permission_decision(composite_result),
+            "preToolUseMarkerWriteDecision": hook_pretooluse_permission_decision(marker_write_result),
+            "preToolUseCompositeMarkerWriteDecision": hook_pretooluse_permission_decision(composite_marker_write_result),
+            "preToolUseInlineMarkerWriteDecision": hook_pretooluse_permission_decision(inline_marker_write_result),
+            "preToolUseSmokeMarkerWriteDecision": hook_pretooluse_permission_decision(smoke_marker_write_result),
+            "preToolUseSplitMarkerFakeGateDecision": hook_pretooluse_permission_decision(split_marker_fake_gate_result),
+            "stopDecision": stop_payload.get("decision") if isinstance(stop_payload, dict) else None,
+            "forgedStopDecision": forged_stop_payload.get("decision") if isinstance(forged_stop_payload, dict) else None,
+        }
+
+
 def run_golden_test() -> dict[str, Any]:
     cases = [
         run_golden_case("node-vite", write_sample_node),
@@ -3656,6 +3384,9 @@ def run_golden_test() -> dict[str, Any]:
         run_golden_case("fullstack-compose", write_sample_fullstack),
         run_upgrade_golden_case(),
         run_workbench_guard_golden_case(),
+        run_quality_gate_contract_golden_case(),
+        run_quality_evidence_golden_case(),
+        run_plugin_hook_golden_case(),
     ]
     return {
         "schema": "codex-workbench-golden-test/v1",
@@ -3676,6 +3407,10 @@ def skill_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def default_personal_skill_root() -> Path:
+    return Path.home() / ".codex" / "skills" / "codex-workbench"
+
+
 def default_plugin_root() -> Path | None:
     root = skill_root()
     parts = list(root.parts)
@@ -3687,13 +3422,26 @@ def default_plugin_root() -> Path | None:
         candidate = Path(*parts[:index])
         if (candidate / ".codex-plugin" / "plugin.json").exists():
             return candidate
-    home_candidate = Path.home() / "plugins" / "codex-workbench"
-    if (home_candidate / ".codex-plugin" / "plugin.json").exists():
-        return home_candidate
+    for home_candidate in (
+        Path.home() / "plugins" / "codex-workbench" / "plugins" / "codex-workbench",
+        Path.home() / "plugins" / "codex-workbench",
+    ):
+        if (home_candidate / ".codex-plugin" / "plugin.json").exists():
+            return home_candidate
     return None
 
 
 def iter_publish_files(root: Path) -> list[Path]:
+    files: list[Path] = []
+    for current, dirs, filenames in os.walk(root):
+        cur = Path(current)
+        dirs[:] = [d for d in dirs if d not in {".git", ".hg", ".svn", ".workbench-validation"}]
+        for filename in filenames:
+            files.append(cur / filename)
+    return files
+
+
+def iter_actual_tree_files(root: Path) -> list[Path]:
     files: list[Path] = []
     for current, dirs, filenames in os.walk(root):
         cur = Path(current)
@@ -3703,20 +3451,50 @@ def iter_publish_files(root: Path) -> list[Path]:
     return files
 
 
-def scan_publish_tree(root: Path, label: str) -> list[dict[str, str]]:
+def is_validation_output_path(rel: str) -> bool:
+    normalized = rel.replace("\\", "/")
+    return bool(re.search(r"(?:^|/)\.workbench-validation(?:/|$)", normalized, re.IGNORECASE))
+
+
+def scan_actual_tree_residue(root: Path, label: str, include_publish_residue: bool = True, include_validation_output: bool = True) -> list[dict[str, str]]:
+    findings: list[dict[str, str]] = []
+    for path in iter_actual_tree_files(root):
+        rel = rel_to(root, path)
+        normalized = rel.replace("\\", "/")
+        if include_validation_output and is_validation_output_path(normalized):
+            findings.append(doctor_issue(
+                "P2",
+                "generated-validation-output-present",
+                f"{label} contains .workbench-validation output. It is excluded from the manifest, but direct directory copies may leak stale local reports.",
+                rel,
+            ))
+            continue
+        if not include_publish_residue:
+            continue
+        for pattern in PUBLISH_BLOCKLIST_PATTERNS:
+            if is_validation_output_path(normalized):
+                continue
+            if pattern.search(normalized):
+                findings.append(doctor_issue("P1", "publish-artifact-residue", f"{label} contains cache, legacy, or internal residue.", rel))
+                break
+    return findings
+
+
+def scan_publish_tree(root: Path, label: str, check_residue: bool = True) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     for path in iter_publish_files(root):
         rel = rel_to(root, path)
         normalized = rel.replace("\\", "/")
-        for pattern in PUBLISH_BLOCKLIST_PATTERNS:
-            if pattern.search(normalized):
-                findings.append(doctor_issue("P1", "publish-artifact-residue", f"{label} contains cache, legacy, or internal residue.", rel))
-                break
+        if check_residue:
+            for pattern in PUBLISH_BLOCKLIST_PATTERNS:
+                if pattern.search(normalized):
+                    findings.append(doctor_issue("P1", "publish-artifact-residue", f"{label} contains cache, legacy, or internal residue.", rel))
+                    break
         if path.suffix.lower() not in {".md", ".py", ".ps1", ".sh", ".json", ".toml", ".yml", ".yaml", ".txt"}:
             continue
-        if path.name == "workbench.py" and path.parent.name == "scripts":
-            continue
         text = read_text_safe(path)
+        if path.name == "workbench.py" and path.parent.name == "scripts":
+            text = re.sub(r"(?s)PERSONAL_PATH_PATTERNS\s*=\s*\[.*?\]\n\n", "PERSONAL_PATH_PATTERNS = []\n\n", text, count=1)
         for pattern in PERSONAL_PATH_PATTERNS:
             if pattern.search(text):
                 findings.append(doctor_issue("P1", "personal-path", f"{label} contains a personal absolute path.", rel))
@@ -3728,14 +3506,114 @@ def scan_publish_tree(root: Path, label: str) -> list[dict[str, str]]:
     return findings
 
 
+def glob_match(path: str, pattern: str) -> bool:
+    normalized_path = path.replace("\\", "/")
+    normalized_pattern = pattern.replace("\\", "/")
+    if normalized_pattern.endswith("/**"):
+        prefix = normalized_pattern[:-3].rstrip("/")
+        return normalized_path == prefix or normalized_path.startswith(prefix + "/")
+    if normalized_pattern.startswith("**/"):
+        tail = normalized_pattern[3:]
+        return normalized_path == tail or normalized_path.endswith("/" + tail) or fnmatch.fnmatch(normalized_path, normalized_pattern)
+    return fnmatch.fnmatch(normalized_path, normalized_pattern)
+
+
+def materialize_packaging_manifest(plugin: Path, manifest: dict[str, Any]) -> tuple[list[str], list[dict[str, str]]]:
+    findings: list[dict[str, str]] = []
+    include = manifest.get("include") if isinstance(manifest.get("include"), list) else []
+    exclude = manifest.get("exclude") if isinstance(manifest.get("exclude"), list) else []
+    all_files: list[str] = []
+    for current, dirs, filenames in os.walk(plugin):
+        dirs[:] = [d for d in dirs if d not in {".git", ".hg", ".svn"}]
+        cur = Path(current)
+        for filename in filenames:
+            all_files.append(rel_to(plugin, cur / filename).replace("\\", "/"))
+    selected: set[str] = set()
+    for pattern in include:
+        if not isinstance(pattern, str):
+            findings.append(doctor_issue("P1", "packaging-manifest-invalid-include", "Packaging manifest include entries must be strings.", "packaging-manifest.json"))
+            continue
+        matches = [rel for rel in all_files if glob_match(rel, pattern)]
+        if not matches:
+            findings.append(doctor_issue("P2", "packaging-manifest-empty-include", f"Packaging manifest include pattern matched no files: {pattern}", "packaging-manifest.json"))
+        selected.update(matches)
+    for pattern in exclude:
+        if not isinstance(pattern, str):
+            findings.append(doctor_issue("P1", "packaging-manifest-invalid-exclude", "Packaging manifest exclude entries must be strings.", "packaging-manifest.json"))
+            continue
+        selected = {rel for rel in selected if not glob_match(rel, pattern)}
+    blocked = [rel for rel in sorted(selected) if any(pattern.search(rel) for pattern in PUBLISH_BLOCKLIST_PATTERNS)]
+    for rel in blocked[:20]:
+        findings.append(doctor_issue("P1", "packaging-manifest-includes-residue", "Materialized package file list includes cache, validation output, legacy, or internal residue.", rel))
+    return sorted(selected), findings
+
+
+def file_list_hash(paths: list[str]) -> str:
+    payload = "\n".join(sorted(paths)).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def git_tracked_file_set(root: Path) -> set[str] | None:
+    try:
+        top_result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+            timeout=20,
+        )
+    except Exception:
+        return None
+    if top_result.returncode != 0:
+        return None
+    repo_root = Path(top_result.stdout.strip()).resolve()
+    try:
+        files_result = subprocess.run(
+            ["git", "ls-files"],
+            cwd=str(repo_root),
+            text=True,
+            capture_output=True,
+            timeout=20,
+        )
+    except Exception:
+        return None
+    if files_result.returncode != 0:
+        return None
+    tracked: set[str] = set()
+    for line in files_result.stdout.splitlines():
+        rel = line.strip()
+        if not rel:
+            continue
+        absolute = (repo_root / rel).resolve()
+        try:
+            tracked.add(absolute.relative_to(root.resolve()).as_posix())
+        except ValueError:
+            continue
+    return tracked
+
+
+def validate_manifest_files_tracked(plugin: Path, manifest_files: list[str]) -> list[dict[str, str]]:
+    tracked = git_tracked_file_set(plugin)
+    if tracked is None:
+        return [doctor_issue("P3", "package-git-tracking-unverified", "Package file git tracking could not be verified; run package-check in a git checkout before release.", "packaging-manifest.json")]
+    findings: list[dict[str, str]] = []
+    for rel in manifest_files:
+        normalized = rel.replace("\\", "/")
+        if normalized not in tracked:
+            findings.append(doctor_issue("P2", "package-file-untracked", "Materialized package file exists locally but is not tracked by git; clean-checkout packaging may omit it.", normalized))
+    return findings
+
+
 def validate_skill_files(root: Path, label: str) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     for rel in REQUIRED_SKILL_FILES:
         if not (root / rel).exists():
             findings.append(doctor_issue("P1", "missing-skill-file", f"{label} is missing a required bundled file.", rel))
-    for rel in ("scripts/workbench.py", "scripts/intake.py", "scripts/check_enhancements.py"):
-        path = root / rel
-        if not path.exists():
+    script_root = root / "scripts"
+    python_files = sorted(script_root.rglob("*.py")) if script_root.exists() else []
+    for path in python_files:
+        rel = rel_to(root, path)
+        if any(part == "__pycache__" for part in path.parts):
             continue
         try:
             ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -3783,6 +3661,9 @@ def validate_plugin_hooks(plugin: Path) -> list[dict[str, str]]:
             serialized = json.dumps(hooks, ensure_ascii=False)
             if "workbench-hard-gate.ps1" not in serialized:
                 findings.append(doctor_issue("P1", "plugin-hooks-missing-hard-gate", "Plugin hooks should invoke workbench-hard-gate.ps1.", rel_to(plugin, hooks_json)))
+            matchers = json.dumps([item.get("matcher") for items in hooks.get("hooks", {}).values() if isinstance(items, list) for item in items if isinstance(item, dict)], ensure_ascii=False)
+            if not all(term in matchers for term in ("functions", "shell_command", "multi_tool_use")):
+                findings.append(doctor_issue("P1", "plugin-hooks-matcher-gap", "Plugin hooks should match current tool namespaces such as functions.shell_command, functions.apply_patch, and multi_tool_use.", rel_to(plugin, hooks_json)))
     if not hook_script.exists():
         findings.append(doctor_issue("P1", "missing-plugin-hook-script", "Plugin should bundle hooks/workbench-hard-gate.ps1.", rel_to(plugin, hook_script)))
     else:
@@ -3839,19 +3720,23 @@ def compare_skill_trees(personal: Path, plugin_skill: Path) -> list[dict[str, st
     return findings
 
 
-def doctor_workbench(plugin_path: str | None = None) -> dict[str, Any]:
-    personal = skill_root()
+def doctor_workbench(plugin_path: str | None = None, personal_skill_path: str | None = None) -> dict[str, Any]:
+    personal = Path(personal_skill_path).expanduser().resolve() if personal_skill_path else default_personal_skill_root()
     plugin = Path(plugin_path).expanduser().resolve() if plugin_path else default_plugin_root()
     findings: list[dict[str, str]] = []
     checks: list[str] = []
 
-    checks.append("personal skill required files")
-    findings.extend(validate_skill_files(personal, "Personal skill"))
-    findings.extend(scan_publish_tree(personal, "Personal skill"))
+    if not personal.exists():
+        findings.append(doctor_issue("P1", "personal-skill-not-found", "Personal skill root was not found.", str(personal)))
+    else:
+        checks.append("personal skill required files")
+        findings.extend(validate_skill_files(personal, "Personal skill"))
+        findings.extend(scan_publish_tree(personal, "Personal skill", check_residue=False))
+        findings.extend(scan_actual_tree_residue(personal, "Personal skill"))
 
     plugin_summary: dict[str, Any] | None = None
     if plugin is None:
-        findings.append(doctor_issue("P2", "plugin-not-found", "Plugin root was not found. Pass --plugin <path> when checking a package."))
+        findings.append(doctor_issue("P1", "plugin-not-found", "Plugin root was not found. Pass --plugin <path> when checking a package."))
     else:
         checks.append("plugin manifest")
         manifest, manifest_findings = validate_plugin_manifest(plugin)
@@ -3863,10 +3748,12 @@ def doctor_workbench(plugin_path: str | None = None) -> dict[str, Any]:
             checks.append("plugin skill required files")
             findings.extend(validate_skill_files(plugin_skill, "Plugin skill"))
             findings.extend(scan_publish_tree(plugin, "Plugin package"))
+            findings.extend(scan_actual_tree_residue(plugin, "Plugin package", include_publish_residue=False))
             checks.append("maintenance evidence")
             findings.extend(validate_maintenance_evidence(plugin))
-            checks.append("personal/plugin sync")
-            findings.extend(compare_skill_trees(personal, plugin_skill))
+            if personal.exists():
+                checks.append("personal/plugin sync")
+                findings.extend(compare_skill_trees(personal, plugin_skill))
         plugin_summary = {
             "path": str(plugin),
             "manifestName": manifest.get("name") if manifest else None,
@@ -3923,16 +3810,33 @@ def validate_packaging_manifest(plugin: Path) -> list[dict[str, str]]:
             findings.append(doctor_issue("P1", "packaging-manifest-missing-required-exclude", f"Packaging manifest should exclude {required}.", "packaging-manifest.json"))
     if visible != ["codex-workbench"]:
         findings.append(doctor_issue("P1", "packaging-manifest-visible-skill-mismatch", "Packaging manifest should expose only codex-workbench.", "packaging-manifest.json"))
+    if isinstance(manifest, dict):
+        _, materialized_findings = materialize_packaging_manifest(plugin, manifest)
+        findings.extend(materialized_findings)
     return findings
 
 
-def package_check_workbench(plugin_path: str | None = None, expected_version: str | None = None, write_report: bool = False) -> dict[str, Any]:
+def packaging_manifest_file_list(plugin: Path) -> tuple[list[str], list[dict[str, str]]]:
+    manifest_path = plugin / "packaging-manifest.json"
+    if not manifest_path.exists():
+        return [], []
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        return [], []
+    if not isinstance(manifest, dict):
+        return [], []
+    return materialize_packaging_manifest(plugin, manifest)
+
+
+def package_check_workbench(plugin_path: str | None = None, expected_version: str | None = None, write_report: bool = False, personal_skill_path: str | None = None, strict_release: bool = False) -> dict[str, Any]:
     plugin = Path(plugin_path).expanduser().resolve() if plugin_path else default_plugin_root()
-    doctor = doctor_workbench(str(plugin) if plugin else None)
+    doctor = doctor_workbench(str(plugin) if plugin else None, personal_skill_path)
     findings = list(doctor["findings"])
     checks = list(doctor["checks"])
     manifest: dict[str, Any] | None = None
     exposed_skills: list[str] = []
+    manifest_files: list[str] = []
 
     if plugin is None:
         findings.append(doctor_issue("P1", "package-plugin-missing", "Package check requires a plugin root. Pass --plugin <path>."))
@@ -3942,6 +3846,10 @@ def package_check_workbench(plugin_path: str | None = None, expected_version: st
         findings.extend(manifest_findings)
         checks.append("packaging manifest")
         findings.extend(validate_packaging_manifest(plugin))
+        manifest_files, _ = packaging_manifest_file_list(plugin)
+        checks.append("materialized package file list")
+        findings.extend(validate_manifest_files_tracked(plugin, manifest_files))
+        checks.append("git tracked package files")
         exposed_skills = exposed_plugin_skills(plugin)
         checks.append("visible skill surface")
         if exposed_skills != ["codex-workbench"]:
@@ -3962,14 +3870,17 @@ def package_check_workbench(plugin_path: str | None = None, expected_version: st
     severities = {"P0": 0, "P1": 0, "P2": 0, "P3": 0}
     for item in findings:
         severities[item["severity"]] = severities.get(item["severity"], 0) + 1
-    passed = severities["P0"] == 0 and severities["P1"] == 0
+    passed = severities["P0"] == 0 and severities["P1"] == 0 and (not strict_release or severities["P2"] == 0)
     report = {
         "schema": "codex-workbench-package-check/v1",
         "timestamp": utc_now(),
         "pluginRoot": str(plugin) if plugin else None,
         "expectedVersion": expected_version,
+        "strictRelease": strict_release,
         "manifestVersion": manifest.get("version") if manifest else None,
         "visibleSkills": exposed_skills,
+        "manifestFileCount": len(manifest_files),
+        "manifestFileListHash": file_list_hash(manifest_files) if manifest_files else None,
         "recipientMustConfigure": RECIPIENT_SETUP_ITEMS,
         "maintenanceEvidence": sorted(MAINTENANCE_EVIDENCE_FILES.keys()),
         "checks": checks,
@@ -4040,11 +3951,14 @@ def main(argv: list[str] | None = None) -> int:
 
     p_doctor = sub.add_parser("doctor")
     p_doctor.add_argument("--plugin", default=None, help="Optional plugin root to check. Defaults to ~/plugins/codex-workbench when present.")
+    p_doctor.add_argument("--personal-skill", default=None, help="Personal skill root to compare. Defaults to ~/.codex/skills/codex-workbench when present.")
     p_doctor.add_argument("--output", default=None)
 
     p_package = sub.add_parser("package-check")
     p_package.add_argument("--plugin", default=None, help="Plugin root to check. Defaults to ~/plugins/codex-workbench when present.")
+    p_package.add_argument("--personal-skill", default=None, help="Personal skill root to compare. Defaults to ~/.codex/skills/codex-workbench when present.")
     p_package.add_argument("--expected-version", default=None)
+    p_package.add_argument("--strict-release", action="store_true", help="Fail package-check when P2 findings remain. Intended for release CI.")
     p_package.add_argument("--write-report", action="store_true")
     p_package.add_argument("--output", default=None)
 
@@ -4104,11 +4018,11 @@ def main(argv: list[str] | None = None) -> int:
         write_json(report, args.output)
         return 0 if report["passed"] else 1
     if args.command == "doctor":
-        report = doctor_workbench(args.plugin)
+        report = doctor_workbench(args.plugin, args.personal_skill)
         write_json(report, args.output)
         return 0 if report["passed"] else 1
     if args.command == "package-check":
-        report = package_check_workbench(args.plugin, args.expected_version, args.write_report)
+        report = package_check_workbench(args.plugin, args.expected_version, args.write_report, args.personal_skill, args.strict_release)
         write_json(report, args.output)
         return 0 if report["passed"] else 1
     if args.command == "user-workbench":

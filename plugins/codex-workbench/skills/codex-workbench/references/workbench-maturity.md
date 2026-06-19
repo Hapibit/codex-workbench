@@ -65,7 +65,7 @@ The repo has runnable quality/runtime gates.
 Required:
 
 - `workbench/runtime/WORKFLOW_STATE.schema.json`.
-- `runtime_gate.py` generates `.workbench-validation/workflow-state.json`.
+- `runtime_gate.py` generates `.workbench-validation/runtime-state.json`, while `quality_gate.py` writes `.workbench-validation/quality-workflow-state.json`.
 - `quality_gate.py` checks current git diff, feature status, Markdown evidence, traceability, review, and marker freshness.
 - `.workbench-validation/quality-gate-ok.json` is written only after success and includes `git_head`, `diff_hash`, `feature_id`, `commands_run`, `created_at`, and branch protection status.
 - Scorecard is invoked as advisory evidence audit and cannot override hard failures.

@@ -93,7 +93,7 @@ Common checks by stack:
 Required behavior:
 
 - Default to dry-run plan.
-- Generate or validate `.workbench-validation/workflow-state.json`.
+- Generate or validate `.workbench-validation/runtime-state.json`; do not overwrite `.workbench-validation/quality-workflow-state.json` written by the quality gate.
 - Include `git_head`, `diff_hash`, active feature, current stage, allowed actions, source hashes, and creation timestamp.
 - Do not trust long-lived `workbench/runtime/WORKFLOW_STATE.json` as state.
 - Require `--apply` before starting long-running services or writing generated state.

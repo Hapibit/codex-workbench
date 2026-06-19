@@ -1,0 +1,49 @@
+name: Codex Workbench
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  windows-package-check:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run workbench self-test
+        shell: pwsh
+        run: py -B plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py self-test
+
+      - name: Run workbench golden-test
+        shell: pwsh
+        run: py -B plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py golden-test
+
+      - name: Run plugin doctor
+        shell: pwsh
+        run: py -B plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py doctor --plugin plugins/codex-workbench
+
+      - name: Run strict release package check
+        shell: pwsh
+        run: py -B plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py package-check --plugin plugins/codex-workbench --expected-version 2.0.3 --strict-release
+
+  linux-wrapper-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run golden-test with sh wrappers
+        run: python3 -B plugins/codex-workbench/skills/codex-workbench/scripts/workbench.py golden-test

@@ -182,7 +182,7 @@ strict 下未验证项必须有 `accepted_risk`、用户确认、替代验证和
 python workbench/quality/quality_gate.py --profile standard
 ```
 
-通过后写入 `.workbench-validation/quality-gate-ok.json` 和 `.workbench-validation/workflow-state.json`。旧 marker 必须绑定当前 git diff，不能跨 diff 复用。
+通过后写入 `.workbench-validation/quality-gate-ok.json` 和 `.workbench-validation/quality-workflow-state.json`。runtime gate 的状态另写入 `.workbench-validation/runtime-state.json`；旧 marker 必须绑定当前 git diff，不能跨 diff 复用。
 
 ### LEARN
 

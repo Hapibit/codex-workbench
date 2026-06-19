@@ -37,7 +37,7 @@ delivery_allowed: false
 
 ## 状态更新规则
 
-- 每轮开始先读本文件和 `.workbench-validation/workflow-state.json`。
+- 每轮开始先读本文件和 `.workbench-validation/quality-workflow-state.json`；runtime 检查状态在 `.workbench-validation/runtime-state.json`。
 - 本文件可以由 AI 建议更新，但不能替代 `quality_gate.py` 的判定。
 - 当前阶段变化、active feature 变化、关键命令变化或风险变化后更新本文件。
 - 如果本文件和 git diff、质量门报告、feature package 冲突，以独立证据为准。
